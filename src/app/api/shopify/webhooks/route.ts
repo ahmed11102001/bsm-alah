@@ -27,6 +27,7 @@ import {
   isShopifyCheckout,
 } from "@/types/shopify";
 import { triggerStoreAutomation } from "@/lib/store-automation";
+import { upsertStoreContact } from "@/lib/store-contacts";
 
 // ── Token helper — نفس WooCommerce و EasyOrders ───────────────────────────────
 function userToken(userId: string): string {
@@ -423,7 +424,8 @@ async function handleCheckoutAbandoned(
     }
 
     const cleanPhone   = rawPhone.replace(/\D/g, "");
-    if (cleanPhone.length < 9) return;
+    const customerEmail = checkout.customer?.email ?? checkout.email ?? null;
+    if (cleanPhone.length < 9 && !customerEmail) return;
 
     const customerName = [checkout.customer?.first_name, checkout.customer?.last_name]
       .filter(Boolean).join(" ") || "عميل";
@@ -443,7 +445,7 @@ async function handleCheckoutAbandoned(
         userId,
         source:        "shopify",
         externalId,
-        customerPhone: cleanPhone,
+        customerPhone: cleanPhone || "",
         customerName,
         cartTotal,
         cartItems:     (checkout.line_items ?? []) as any,
@@ -453,10 +455,12 @@ async function handleCheckoutAbandoned(
     });
 
     // Upsert Contact عشان نقدر نبعتله رسالة
-    await prisma.contact.upsert({
-      where:  { phone_userId: { phone: cleanPhone, userId } },
-      update: { name: customerName !== "عميل" ? customerName : undefined },
-      create: { phone: cleanPhone, userId, name: customerName },
+    await upsertStoreContact({
+      userId,
+      phone: cleanPhone,
+      email: customerEmail,
+      updateName: customerName !== "عميل" ? customerName : undefined,
+      createName: customerName,
     }).catch(() => {});
 
     // Inngest event — هيستنى ساعة ويتحقق إذا اشترى

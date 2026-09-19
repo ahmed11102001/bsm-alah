@@ -68,7 +68,6 @@ export default async function ChannelsPage({
       whatsAppData={whatsappAccount}
       isEmailConnected={isEmailConnected}
       emailData={emailConnection}
-      userName={session.user.name}
       canStore={canStore}
       canManageStore={canManageStore}
       connectStoreRequested={connectStoreRequested}

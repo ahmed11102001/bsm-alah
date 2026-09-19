@@ -7,10 +7,6 @@ import ShopifyOAuthToast from "./ShopifyOAuthToast";
 import StoreConnectWizard from "./store/StoreConnectWizard";
 import { motion, type Variants } from "framer-motion";
 import {
-  MessageSquare,
-  Mail,
-  Instagram,
-  Send as TelegramIcon,
   CheckCircle2,
   XCircle,
   Clock,
@@ -19,7 +15,6 @@ import {
   ExternalLink,
   Sparkles,
   Layers,
-  Radio,
   Lock,
 } from "lucide-react";
 
@@ -34,7 +29,6 @@ interface ChannelsClientProps {
     fromEmail?: string | null;
     lastTestSuccess?: boolean | null;
   } | null;
-  userName?: string | null;
   canStore?: boolean;
   canManageStore?: boolean;
   connectStoreRequested?: boolean;
@@ -45,7 +39,6 @@ export default function ChannelsClient({
   whatsAppData,
   isEmailConnected = false,
   emailData,
-  userName,
   canStore = false,
   canManageStore = false,
   connectStoreRequested = false,
@@ -78,26 +71,18 @@ export default function ChannelsClient({
         transition={{ duration: 0.4 }}
         className="mb-10 text-center sm:text-right"
       >
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md mb-3">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#20d378]/25 bg-[#20d378]/[.07] px-3.5 py-1 text-xs font-medium text-[#20d378] backdrop-blur-md mb-3">
           <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-          <span>قنوات المحادثات والتواصل</span>
+          <span>Retention Marketing</span>
         </div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-          {userName ? `أهلاً بك، ${userName} 👋` : "أهلاً بك 👋"}
-          <span className="block text-emerald-400 mt-1">اختر القناة للمتابعة</span>
+          قنوات التسويق والاحتفاظ بالعملاء
+          <span className="block text-[#20d378] mt-1 text-lg sm:text-xl lg:text-2xl font-bold">Retention Marketing</span>
         </h1>
         <p className="mt-2 text-sm sm:text-base text-white/60 max-w-2xl">
           أدر قنوات التواصل المتاحة وتابع محادثات عملائك وحملاتك الآلية من منصة موحدة فائقة الذكاء.
         </p>
       </motion.div>
-
-      {/* Section Header: Retention Marketing */}
-      <div className="mb-4 flex items-center gap-2">
-        <div className="h-2 w-2 rounded-full bg-emerald-400" />
-        <h2 className="text-xs font-bold uppercase tracking-wider text-white/50">
-          قنوات التسويق والاحتفاظ بالعملاء (Retention Marketing)
-        </h2>
-      </div>
 
       {/* Channels Grid */}
       <motion.div
@@ -111,27 +96,27 @@ export default function ChannelsClient({
           variants={itemVariants}
           className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border transition-all duration-300 ${
             isWhatsAppConnected
-              ? "border-emerald-500/30 bg-gradient-to-b from-emerald-950/40 via-emerald-950/20 to-transparent hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-900/20"
+              ? "border-[#20d378]/25 bg-white/[0.03] hover:border-[#20d378]/45 hover:shadow-2xl hover:shadow-[#20d378]/10"
               : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
           } p-6 backdrop-blur-md`}
         >
           {/* Subtle decorative glow */}
           {isWhatsAppConnected && (
-            <div className="pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full bg-emerald-500/20 blur-3xl" />
+            <div className="pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full bg-[#20d378]/15 blur-3xl" />
           )}
 
           <div>
-            {/* Top header with icon and badge */}
+            {/* Top header with brand image and badge */}
             <div className="flex items-start justify-between gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#25D366]/15 border border-[#25D366]/30 text-[#25D366] shadow-lg shadow-[#25D366]/10 transition-transform duration-300 group-hover:scale-105">
-                <MessageSquare className="h-7 w-7 fill-current" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] border border-white/10 transition-transform duration-300 group-hover:scale-105">
+                <img src="/channels/whatsapp.svg" alt="WhatsApp" className="h-8 w-8 object-contain" />
               </div>
 
               {isWhatsAppConnected ? (
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-300 shadow-sm shadow-emerald-950">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-[#20d378]/30 bg-[#20d378]/[.08] px-3 py-1 text-xs font-bold text-[#20d378] shadow-sm">
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20d378] opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#20d378]" />
                   </span>
                   <span>متصل</span>
                 </div>
@@ -155,7 +140,7 @@ export default function ChannelsClient({
 
             {/* Connection Meta Details if connected */}
             {isWhatsAppConnected && whatsAppData?.phoneNumberId && (
-              <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-950/30 p-2.5 text-[11px] text-emerald-200/80">
+              <div className="mt-4 rounded-xl border border-[#20d378]/20 bg-[#20d378]/[.06] p-2.5 text-[11px] text-white/70">
                 <div className="flex items-center justify-between">
                   <span className="text-white/40">معرّف الرقم:</span>
                   <span className="font-mono">{whatsAppData.phoneNumberId}</span>
@@ -169,7 +154,7 @@ export default function ChannelsClient({
             {isWhatsAppConnected ? (
               <Link
                 href="/dashboard"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3 text-sm font-bold text-[#04241b] shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:brightness-110 hover:shadow-emerald-500/35 active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#20d378] px-5 py-3 text-sm font-bold text-[#060810] shadow-lg shadow-[#20d378]/25 transition-all duration-200 hover:brightness-110 hover:shadow-[#20d378]/35 active:scale-[0.98]"
               >
                 <span>افتح الداشبورد</span>
                 <ArrowLeft className="h-4 w-4" />
@@ -177,7 +162,7 @@ export default function ChannelsClient({
             ) : (
               <Link
                 href="/dashboard/api"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-3 text-sm font-bold text-emerald-300 transition-all duration-200 hover:bg-emerald-500/20 active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#20d378]/40 bg-[#20d378]/[.08] px-5 py-3 text-sm font-bold text-[#20d378] transition-all duration-200 hover:bg-[#20d378]/[.15] active:scale-[0.98]"
               >
                 <span>ربط واتساب</span>
                 <ArrowLeft className="h-4 w-4" />
@@ -191,27 +176,27 @@ export default function ChannelsClient({
           variants={itemVariants}
           className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border transition-all duration-300 ${
             isEmailConnected
-              ? "border-blue-500/30 bg-gradient-to-b from-blue-950/40 via-blue-950/20 to-transparent hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-900/20"
-              : "border-white/10 bg-white/[0.03] hover:border-blue-500/30 hover:bg-white/[0.05]"
+              ? "border-[#20d378]/25 bg-white/[0.03] hover:border-[#20d378]/45 hover:shadow-2xl hover:shadow-[#20d378]/10"
+              : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
           } p-6 backdrop-blur-md`}
         >
           {/* Decorative glow if connected */}
           {isEmailConnected && (
-            <div className="pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full bg-blue-500/20 blur-3xl" />
+            <div className="pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full bg-[#20d378]/15 blur-3xl" />
           )}
 
           <div>
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-400 shadow-lg shadow-blue-500/10 transition-transform duration-300 group-hover:scale-105">
-                <Mail className="h-7 w-7" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] border border-white/10 transition-transform duration-300 group-hover:scale-105">
+                <img src="/channels/gmail.svg" alt="Email" className="h-8 w-8 object-contain" />
               </div>
 
               {isEmailConnected ? (
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-300 shadow-sm shadow-blue-950">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-[#20d378]/30 bg-[#20d378]/[.08] px-3 py-1 text-xs font-bold text-[#20d378] shadow-sm">
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20d378] opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#20d378]" />
                   </span>
                   <span>متصل</span>
                 </div>
@@ -227,7 +212,7 @@ export default function ChannelsClient({
             <div className="mt-5">
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-white">البريد الإلكتروني</h2>
-                <span className="rounded-md bg-blue-500/20 border border-blue-500/30 px-1.5 py-0.5 text-[10px] font-bold text-blue-300">
+                <span className="rounded-md bg-[#20d378]/10 border border-[#20d378]/25 px-1.5 py-0.5 text-[10px] font-bold text-[#20d378]">
                   Email Marketing
                 </span>
               </div>
@@ -238,10 +223,10 @@ export default function ChannelsClient({
 
             {/* Connected email meta if connected */}
             {isEmailConnected && emailData?.fromEmail && (
-              <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-950/30 p-2.5 text-[11px] text-blue-200/80">
+              <div className="mt-4 rounded-xl border border-[#20d378]/20 bg-[#20d378]/[.06] p-2.5 text-[11px] text-white/70">
                 <div className="flex items-center justify-between">
                   <span className="text-white/40">بريد الإرسال:</span>
-                  <span className="font-mono text-blue-300 font-semibold">{emailData.fromEmail}</span>
+                  <span className="font-mono text-[#20d378] font-semibold">{emailData.fromEmail}</span>
                 </div>
               </div>
             )}
@@ -252,7 +237,7 @@ export default function ChannelsClient({
             {isEmailConnected ? (
               <Link
                 href="/dashboard/email"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#20d378] px-5 py-3 text-sm font-bold text-[#060810] shadow-lg shadow-[#20d378]/25 transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
               >
                 <span>افتح الداشبورد</span>
                 <ArrowLeft className="h-4 w-4" />
@@ -260,7 +245,7 @@ export default function ChannelsClient({
             ) : (
               <Link
                 href="/dashboard/email/settings"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-500/40 bg-blue-500/10 px-5 py-3 text-sm font-bold text-blue-300 transition-all duration-200 hover:bg-blue-500/20 active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#20d378]/40 bg-[#20d378]/[.08] px-5 py-3 text-sm font-bold text-[#20d378] transition-all duration-200 hover:bg-[#20d378]/[.15] active:scale-[0.98]"
               >
                 <span>ربط الإيميل</span>
                 <ArrowLeft className="h-4 w-4" />
@@ -276,8 +261,8 @@ export default function ChannelsClient({
         >
           <div>
             <div className="flex items-start justify-between gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400">
-                <Instagram className="h-7 w-7" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] border border-white/10">
+                <img src="/channels/instagram.svg" alt="Instagram" className="h-8 w-8 object-contain opacity-80" />
               </div>
 
               <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
@@ -313,8 +298,8 @@ export default function ChannelsClient({
         >
           <div>
             <div className="flex items-start justify-between gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
-                <TelegramIcon className="h-7 w-7" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] border border-white/10">
+                <img src="/channels/telegram.svg" alt="Telegram" className="h-8 w-8 object-contain opacity-80" />
               </div>
 
               <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
@@ -350,8 +335,8 @@ export default function ChannelsClient({
         >
           <div>
             <div className="flex items-start justify-between gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                <Radio className="h-7 w-7" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] border border-white/10">
+                <img src="/channels/messenger.svg" alt="Messenger" className="h-8 w-8 object-contain opacity-80" />
               </div>
 
               <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
