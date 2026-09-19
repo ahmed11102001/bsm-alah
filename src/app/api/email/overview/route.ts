@@ -58,7 +58,11 @@ export async function GET() {
     const sent = campaignsStats._sum.sentCount || 0;
     const delivered = campaignsStats._sum.deliveredCount || 0;
     const failed = campaignsStats._sum.failedCount || 0;
-    const acceptanceRate = sent > 0 ? +((delivered / sent) * 100).toFixed(1) : 100;
+    // التسمية الصحيحة: SENT في الـ DB = "قَبِلها SMTP" (accepted) — وليست
+    // "استلمها المستلم". deliveredCount لا تُرفع عند نجاح SMTP، بل فقط عبر
+    // delivery webhook لاحقًا (إن وُجد). القبول الضمني = المحاولات − الفاشلة.
+    const accepted = Math.max(0, sent - failed);
+    const acceptanceRate = sent > 0 ? +((accepted / sent) * 100).toFixed(1) : 100;
 
     return NextResponse.json({
       stats: {
@@ -67,9 +71,11 @@ export async function GET() {
         unsubscribedContacts: totalContacts - subscribedContacts,
         totalCampaigns,
         totalEmailsSent: sent,
-        acceptedEmails: delivered,
+        acceptedEmails: accepted,
+        deliveredEmails: delivered, // توصيل حقيقي عبر webhook فقط (غالبًا 0 مع SMTP خام)
         failedEmails: failed,
-        deliveryRate: acceptanceRate,
+        deliveryRate: acceptanceRate, // معدل القبول لدى SMTP — وليس تأكيد استلام
+        acceptanceRate,
         openRate: null, // Generic SMTP does not track opens without tracking proxy
         isSmtpConfigured: Boolean(connection?.host),
         fromEmail: connection?.fromEmail || null,

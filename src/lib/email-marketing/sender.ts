@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { getEmailConnection } from "./connection";
+import { buildUnsubscribeUrl } from "./unsubscribe-token";
 
 export interface SendEmailPayload {
   to: string;
@@ -11,21 +12,23 @@ export interface SendEmailPayload {
    *  (معاينة قالب لإيميل الأدمن نفسه — مش إرسال تسويقي حقيقي لعميل) — لو
    *  مش موجود، الفوتر ميتضافش. أي إرسال حقيقي لحملة/أتمتة لازم يبعته دايمًا. */
   contactId?: string;
-}
-
-function unsubscribeBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://aiwni.com"
-  ).replace(/\/$/, "");
+  /**
+   * Message-ID ثابت (deterministic) للرسالة — يُستخدم لربط محاولات إعادة
+   * الإرسال لنفس الـ delivery بنفس الـ ID (يُسهّل dedup عند المستلم ويظهر
+   * في الـ logs). لو مش موجود، nodemailer بيولّد واحد عشوائي.
+   */
+  messageId?: string;
 }
 
 /**
- * بيضيف فوتر ثابت فيه رابط Unsubscribe شغال في آخر أي إيميل تسويقي.
+ * بيضيف فوتر ثابت فيه رابط Unsubscribe موقّع في آخر أي إيميل تسويقي.
+ * الرابط يستخدم token موقّع بـ HMAC (`?t=...`) — مش الـ Contact ID الخام —
+ * عشان محدش يقدر يخمّن/يتلاعب في IDs ويلغي اشتراك contacts تانية.
  * نقطة واحدة مشتركة يمر بيها كل إرسال (حملة أو أتمتة) — بدل ما كل ملف
  * يكتب الفوتر ده بنفسه ويتنسى في مكان.
  */
 export function wrapWithUnsubscribeFooter(html: string, contactId: string): string {
-  const unsubscribeUrl = `${unsubscribeBaseUrl()}/unsubscribe?c=${encodeURIComponent(contactId)}`;
+  const unsubscribeUrl = buildUnsubscribeUrl(contactId);
   const footer = `
     <hr style="margin-top:24px;border:none;border-top:1px solid #e5e5e5" />
     <p style="font-size:12px;color:#888;margin-top:12px;font-family:sans-serif">
@@ -80,6 +83,8 @@ export async function sendEmailViaUserSmtp(
       to: payload.to,
       subject: personalizedSubject,
       html: personalizedHtml,
+      // ثابت لكل delivery — محاولات الإعادة تحمل نفس الـ Message-ID
+      ...(payload.messageId ? { messageId: payload.messageId } : {}),
     });
 
     return {

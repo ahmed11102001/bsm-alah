@@ -23,6 +23,8 @@ export interface ProviderSendPayload {
   to: string;
   subject: string;
   html: string;
+  /** Message-ID ثابت اختياري — محاولات الإعادة تحمل نفس الـ ID. */
+  messageId?: string;
 }
 
 export async function sendEmailViaProvider({
@@ -30,6 +32,7 @@ export async function sendEmailViaProvider({
   to,
   subject,
   html,
+  messageId,
 }: ProviderSendPayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const target = (to || "").trim();
   if (!target) {
@@ -67,6 +70,7 @@ export async function sendEmailViaProvider({
       to: target,
       subject,
       html,
+      ...(messageId ? { messageId } : {}),
     });
 
     return { success: true, messageId: info.messageId };

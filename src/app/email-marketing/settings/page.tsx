@@ -3,14 +3,17 @@
 import { useState, useEffect } from "react";
 import SmtpConnectionForm from "./_components/SmtpConnectionForm";
 import EmailConnectionStatusCard from "./_components/EmailConnectionStatusCard";
-import { MOCK_SMTP_CONFIG } from "../constants";
+import { EMPTY_SMTP_CONFIG } from "../constants";
 import type { SmtpConfigDTO } from "../types";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import DomainDnsGuidanceCard from "./_components/DomainDnsGuidanceCard";
 
 export default function EmailSettingsPage() {
-  const [config, setConfig] = useState<SmtpConfigDTO>(MOCK_SMTP_CONFIG);
+  // يبدأ فاضيًا عمدًا: اليوزر الجديد لسه مربطش حاجة، فالفورم لازم يكون فاضيًا
+  // بدل ما يعرض قيم mailgun/company.com الوهمية كأنها إعدادات محفوظة.
+  const [config, setConfig] = useState<SmtpConfigDTO>(EMPTY_SMTP_CONFIG);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +37,8 @@ export default function EmailSettingsPage() {
       })
       .catch((err) => {
         console.error("[EmailSettingsPage] Failed to fetch saved connection:", err);
+        // لازم تنبيه واضح: الفورم الفاضي هنا معناه فشل تحميل، مش "مفيش إعدادات".
+        toast.error("فشل تحميل إعدادات البريد المحفوظة، حاول تحديث الصفحة");
       })
       .finally(() => setLoading(false));
   }, []);

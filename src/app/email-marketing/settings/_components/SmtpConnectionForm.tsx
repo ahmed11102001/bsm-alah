@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Save, Server } from "lucide-react";
 import { toast } from "sonner";
 import TestConnectionButton from "./TestConnectionButton";
-import { SMTP_PORT_PRESETS } from "../../constants";
+import { SMTP_PORT_PRESETS, EMPTY_SMTP_CONFIG } from "../../constants";
 import type { SmtpConfigDTO } from "../../types";
 
 export default function SmtpConnectionForm({
@@ -217,18 +217,7 @@ export default function SmtpConnectionForm({
                 try {
                   const res = await fetch("/api/email/connection", { method: "DELETE" });
                   if (res.ok) {
-                    const resetData: SmtpConfigDTO = {
-                      host: "",
-                      port: 587,
-                      secure: false,
-                      user: "",
-                      password: "",
-                      fromEmail: "",
-                      fromName: "",
-                      isConfigured: false,
-                      lastTestedAt: null,
-                      lastTestSuccess: null,
-                    };
+                    const resetData: SmtpConfigDTO = { ...EMPTY_SMTP_CONFIG };
                     setFormData(resetData);
                     toast.success("تم إلغاء ربط خادم البريد بنجاح.");
                     if (onSaveSuccess) onSaveSuccess(resetData);

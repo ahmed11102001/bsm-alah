@@ -8,7 +8,7 @@ export default function EmailTabsNav() {
   const pathname = usePathname();
 
   return (
-    <div className="border-b border-white/10 bg-[#031510]/60 backdrop-blur-md">
+    <div className="border-b border-slate-200/70 bg-white/95 shadow-[0_1px_8px_rgba(15,23,42,0.04)] backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <nav className="flex space-x-2 rtl:space-x-reverse overflow-x-auto py-2.5 no-scrollbar" aria-label="Tabs">
           {EMAIL_TABS.map((tab) => {

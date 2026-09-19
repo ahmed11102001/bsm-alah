@@ -34,16 +34,19 @@ export const SMTP_PORT_PRESETS = [
   { label: "2525 (منفذ بديل)", value: 2525, secure: false },
 ] as const;
 
-// ── Mock Data للمراحل 2.1 إلى 2.5 ──
-
-export const MOCK_SMTP_CONFIG: SmtpConfigDTO = {
-  host: "smtp.mailgun.org",
+// ── الحالة الابتدائية لصفحة الإعدادات: فورم فاضي تمامًا ────────────────────
+// أي يوزر جديد لسه مربطش SMTP لازم يشوف حقول فاضية، مش قيم mailgun/company.com
+// الوهمية اللي كانت هنا قبل كده (MOCK_SMTP_CONFIG — اتحذفت نهائيًا).
+// port: 587 افتراضي منطقي (TLS/STARTTLS) مش قيمة وهمية.
+export const EMPTY_SMTP_CONFIG: SmtpConfigDTO = {
+  host: "",
   port: 587,
   secure: false,
-  user: "marketing@company.com",
-  fromEmail: "newsletter@company.com",
-  fromName: "WANI Newsletter",
-  isConfigured: false, // نجعلها false مبدئيًا لعرض البانر التنبيهي، ويمكن تفعيلها
+  user: "",
+  password: "",
+  fromEmail: "",
+  fromName: "",
+  isConfigured: false,
   lastTestedAt: null,
   lastTestSuccess: null,
 };

@@ -158,6 +158,28 @@ export const processEmailCampaign = inngest.createFunction(
         const result: { success: boolean; error?: string } = await step.run(
           `send-delivery-${delivery.id}`,
           async () => {
+            // ── حارس idempotency: لو محاولة سابقة من نفس الـ step نجحت وسجّلت
+            // في الـ DB (Inngest replay/memoization جزئي)، لا نعيد الإرسال —
+            // نرجع النتيجة المسجلة بدل ما نبعت duplicate ونزوّد العداد مرتين.
+            const current = await prisma.emailDelivery.findUnique({
+              where: { id: delivery.id },
+              select: { status: true },
+            });
+            if (
+              current?.status === "SENT" ||
+              current?.status === "DELIVERED" ||
+              current?.status === "OPENED"
+            ) {
+              return { success: true };
+            }
+            if (current?.status === "FAILED") {
+              return { success: false, error: "مسجلة FAILED مسبقًا — تم تخطي إعادة الإرسال" };
+            }
+
+            // Message-ID ثابت لنفس الـ delivery — محاولات الإعادة تحمل نفس
+            // الـ ID (يُسهّل dedup عند المستلم ويظهر في الـ logs).
+            const deterministicMessageId = `<${delivery.id}@email.aiwni>`;
+
             let sendResult: { success: boolean; error?: string };
             try {
               sendResult = await sendEmailViaUserSmtp(userId, {
@@ -166,28 +188,44 @@ export const processEmailCampaign = inngest.createFunction(
                 subject: campaignData.subject,
                 html: campaignData.bodyHtml,
                 previewText: campaignData.previewText,
-                contactId: delivery.contactId,
+                contactId: delivery.contactId ?? undefined,
+                messageId: deterministicMessageId,
               });
             } catch (err: any) {
               sendResult = { success: false, error: err?.message || "خطأ تقني أثناء الإرسال" };
             }
 
-            // تحديث حالة الرسالة + عداد الحملة في transaction واحدة — لو حصل
-            // خطأ DB عرضي هنا، الـstep كله بيفشل ويترمي (من غير ما نكون
-            // سجّلنا نص تحديث)، فإعادة محاولة Inngest هتعيد نفس المنطق من
-            // الأول بأمان (لسه مفيش حاجة اتسجلت)، بدل ما تسجل نجاح جزئي
-            // ملوّث بعداد متكرر.
+            // ⚠️ حدود الضمان الصريحة: SMTP وPostgres ليسا transaction واحدة —
+            // لا توجد exactly-once عبر الشبكة. لو الـ SMTP قَبِل الرسالة ثم
+            // فشل تسجيل النتيجة في الـ DB، الـ step بيفشل وInngest بيعيد
+            // المحاولة، والمحاولة الجديدة قد ترسل duplicate (نفس Message-ID).
+            // ما يضمنه هذا الـ step فعليًا:
+            //  1) نجاح مسجّل لا يُعاد إرساله (الحارس أعلاه)،
+            //  2) تحديث حالة الرسالة + عداد الحملة ذريًا في transaction واحدة
+            //     (لا نجاح جزئي ملوّث بعداد متكرر).
+            // SENT هنا = "قَبِلها SMTP" (accepted) — وليست "استلمها المستلم"
+            // (DELIVERED الحقيقية لا تأتي إلا عبر delivery webhook لاحقًا).
             if (sendResult.success) {
-              await prisma.$transaction([
-                prisma.emailDelivery.update({
-                  where: { id: delivery.id },
-                  data: { status: "SENT", sentAt: new Date(), errorMessage: null },
-                }),
-                prisma.emailCampaign.update({
-                  where: { id: campaignId },
-                  data: { sentCount: { increment: 1 }, deliveredCount: { increment: 1 } },
-                }),
-              ]);
+              try {
+                await prisma.$transaction([
+                  prisma.emailDelivery.update({
+                    where: { id: delivery.id },
+                    data: { status: "SENT", sentAt: new Date(), errorMessage: null },
+                  }),
+                  prisma.emailCampaign.update({
+                    where: { id: campaignId },
+                    data: { sentCount: { increment: 1 } },
+                  }),
+                ]);
+              } catch (dbErr: any) {
+                // أخطر حالة: SMTP قَبِل الرسالة فعلًا لكن التسجيل فشل —
+                // نسجّلها بوضوح بدل ما نبتلعها، لأن إعادة المحاولة قد تكرر الإرسال.
+                console.error(
+                  `[processEmailCampaign] SMTP accepted delivery ${delivery.id} but DB persist failed — retry may duplicate (same Message-ID ${deterministicMessageId}):`,
+                  dbErr
+                );
+                throw dbErr;
+              }
               return { success: true };
             }
 
@@ -227,8 +265,10 @@ export const processEmailCampaign = inngest.createFunction(
         finalStats.map((s) => [s.status, s._count.id])
       );
 
-      const deliveredCount =
-        (statsMap["DELIVERED"] || 0) + (statsMap["SENT"] || 0);
+      // SENT = قَبِلها SMTP (accepted) — ليست DELIVERED حقيقية. DELIVERED لا
+      // تُسجَّل إلا عبر delivery webhook لاحقًا (إن وُجد). sentCount = إجمالي
+      // المحاولات، failedCount = الفاشلة، والـ accepted الضمني = sent - failed.
+      const deliveredCount = statsMap["DELIVERED"] || 0;
       const failedCount = statsMap["FAILED"] || 0;
       const totalCount = Object.values(statsMap).reduce((a, b) => a + b, 0);
 

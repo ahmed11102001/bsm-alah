@@ -219,6 +219,7 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
 
   let deliveredCount = 0;
   let failedCount = 0;
+  let acceptedCount = 0;
 
   for (const del of deliveries) {
     const res = await sendEmailViaUserSmtp(userId, {
@@ -227,15 +228,18 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
       subject: campaign.subject,
       html: campaign.template.bodyHtml,
       previewText: campaign.template.previewText,
-      contactId: del.contactId,
+      contactId: del.contactId ?? undefined,
+      messageId: `<${del.id}@email.aiwni>`,
     });
 
     if (res.success) {
-      deliveredCount++;
+      // SENT = قَبِلها SMTP (accepted) — ليست DELIVERED حقيقية (تأتي فقط عبر
+      // delivery webhook لاحقًا). deliveredCount تبقى 0 هنا عمدًا.
+      acceptedCount++;
       await prisma.emailDelivery.update({
         where: { id: del.id },
         data: {
-          status: "DELIVERED",
+          status: "SENT",
           sentAt: new Date(),
         },
       });
@@ -268,5 +272,6 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
     targetCount: contacts.length,
     deliveredCount,
     failedCount,
+    acceptedCount,
   };
 }

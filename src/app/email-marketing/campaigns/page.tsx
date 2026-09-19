@@ -69,7 +69,7 @@ export default function EmailCampaignsPage() {
   }, [campaigns, loadData]);
 
   const handleCreateCampaign = async (
-    newCampaign: EmailCampaignDTO,
+    newCampaign: { name: string; subject: string; templateId: string; targetTag: string | null },
     sendNow: boolean
   ) => {
     try {

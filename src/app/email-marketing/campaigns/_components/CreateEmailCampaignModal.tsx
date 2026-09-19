@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { X, Send, FileText, Users, Sparkles, Check, ArrowLeft, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import type { EmailCampaignDTO, EmailTemplateDTO } from "../../types";
+import type { EmailTemplateDTO } from "../../types";
+
+/** الحد الأدنى اللي بيتبعت فعليًا للسيرفر — بدون أي أرقام (الأرقام بتيجي من الـfetch بعد الإنشاء). */
+export interface CreateCampaignPayload {
+  name: string;
+  subject: string;
+  templateId: string;
+  targetTag: string | null;
+}
 
 export default function CreateEmailCampaignModal({
   isOpen,
@@ -18,7 +26,7 @@ export default function CreateEmailCampaignModal({
   availableTags: string[];
   totalContactsCount: number;
   onClose: () => void;
-  onCreate: (campaign: EmailCampaignDTO, sendNow: boolean) => void;
+  onCreate: (campaign: CreateCampaignPayload, sendNow: boolean) => void;
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
@@ -50,29 +58,18 @@ export default function CreateEmailCampaignModal({
 
   const handleFinish = async (sendNow: boolean) => {
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 800));
 
-    const chosenTemplate = templates.find((t) => t.id === selectedTemplateId);
-    const targetCount = targetType === "ALL" ? totalContactsCount : Math.min(220, totalContactsCount);
-
-    const newCampaign: EmailCampaignDTO = {
-      id: `cmp_${Date.now()}`,
-      name: name.trim(),
-      subject: subject.trim(),
-      templateId: selectedTemplateId,
-      templateName: chosenTemplate?.name || "قالب بريدي",
-      targetTag: targetType === "TAG" ? selectedTag : null,
-      targetCount,
-      sentCount: sendNow ? targetCount : 0,
-      deliveredCount: sendNow ? targetCount - 2 : 0,
-      failedCount: sendNow ? 2 : 0,
-      openedCount: 0,
-      status: sendNow ? "COMPLETED" : "DRAFT",
-      createdAt: new Date().toISOString(),
-      completedAt: sendNow ? new Date().toISOString() : null,
-    };
-
-    onCreate(newCampaign, sendNow);
+    // بيتبعت للسيرفر بس الحقول الحقيقية — مفيش أرقام وهمية (كانت dead code:
+    // الأب بياخد 4 حقول بس ويعمل loadData بعدها، فالأرقام المزيفة عمرها ما اتعرضت).
+    onCreate(
+      {
+        name: name.trim(),
+        subject: subject.trim(),
+        templateId: selectedTemplateId,
+        targetTag: targetType === "TAG" ? selectedTag : null,
+      },
+      sendNow
+    );
     setSubmitting(false);
 
     if (sendNow) {
