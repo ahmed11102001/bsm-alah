@@ -1,8 +1,10 @@
 "use client";
 
-import { PackageCheck } from "lucide-react";
+import { PackageCheck, Crown } from "lucide-react";
 import BirthdayAutomationCard from "./_components/BirthdayAutomationCard";
 import EmailAutomationCard from "./_components/EmailAutomationCard";
+import CartAbandonAutomationCard from "./_components/CartAbandonAutomationCard";
+import WinbackAutomationCard from "./_components/WinbackAutomationCard";
 
 export default function EmailAutomationsPage() {
   return (
@@ -15,7 +17,18 @@ export default function EmailAutomationsPage() {
       </div>
 
       <div className="space-y-4">
+        <CartAbandonAutomationCard />
+
         <BirthdayAutomationCard />
+
+        <EmailAutomationCard
+          type="VIP_REPEAT"
+          icon={<Crown className="h-5 w-5 text-amber-300" />}
+          title="عميل مميز (VIP) 👑"
+          description="بيتبعت فوراً بمجرد ما العميل يعمل تاني أوردر ليه — عشان تشكره وتكافئه على ولاءه (بيتبعت مرة واحدة بس لكل عميل)."
+          accent="amber"
+        />
+
         <EmailAutomationCard
           type="POST_DELIVERY"
           icon={<PackageCheck className="h-5 w-5 text-emerald-300" />}
@@ -23,6 +36,8 @@ export default function EmailAutomationsPage() {
           description="بعد شحن الأوردر بـ 7 أيام بيتبعت إيميل بالقالب اللي تختاره — لعملاء Shopify وWooCommerce اللي عندهم إيميل."
           accent="emerald"
         />
+
+        <WinbackAutomationCard />
       </div>
     </div>
   );

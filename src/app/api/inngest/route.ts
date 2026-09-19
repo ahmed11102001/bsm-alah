@@ -54,6 +54,9 @@ import {
   processEmailCampaign,
   scheduleEmailCampaign,
 } from "@/inngest/email-campaign-functions";
+import { emailCartAbandonedSteps } from "@/inngest/email-cart-abandon-functions";
+import { emailVipQualified } from "@/inngest/email-vip-functions";
+import { emailWinbackDailyCron } from "@/inngest/email-winback-functions";
 
 const inngestHandler = serve({
   client: inngest,
@@ -108,6 +111,10 @@ const inngestHandler = serve({
     // ── Post-delivery Emails ──
     postDeliveryShopify,
     postDeliveryWoo,
+    // ── Email Automations ──
+    emailCartAbandonedSteps,
+    emailVipQualified,
+    emailWinbackDailyCron,
   ],
 });
 

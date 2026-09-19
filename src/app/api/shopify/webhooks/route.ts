@@ -467,6 +467,7 @@ async function handleCheckoutAbandoned(
         shopifyStoreId,
         checkoutToken: externalId,
         customerPhone: cleanPhone,
+        customerEmail: checkout.customer?.email ?? checkout.email ?? null,
         customerName,
         cartTotal,
         cartItems: checkout.line_items ?? [],

@@ -71,6 +71,14 @@ export const handleWooOrderCreated = inngest.createFunction(
     });
 
     console.log(`[WooCommerce] ✓ Order #${orderNumber} saved — contact: ${contact.id}${couponCodes?.length ? ` — كوبون: ${couponCodes.join(",")}` : ""}`);
+
+    await step.run("check-vip-status", async () => {
+      const orderCount = await prisma.storeOrder.count({ where: { contactId: contact.id } });
+      if (orderCount === 2) {
+        await inngest.send({ name: "email/vip.qualified", data: { userId, contactId: contact.id } });
+      }
+    });
+
     return { success: true, orderId: order.id, contactId: contact.id };
   }
 );

@@ -48,12 +48,30 @@ export async function PUT(req: Request) {
     const enabled = body?.enabled === true;
     const templateId =
       typeof body?.templateId === "string" && body.templateId.trim() ? body.templateId.trim() : null;
+    const settings = body?.settings ? body.settings : null;
 
-    if (enabled && !templateId) {
+    if (enabled && type !== "CART_ABANDONED" && !templateId) {
       return NextResponse.json(
         { error: "لازم تختار قالب قبل التفعيل", code: "TEMPLATE_REQUIRED" },
         { status: 400 }
       );
+    }
+
+    if (enabled && type === "CART_ABANDONED") {
+      if (!settings?.steps || !Array.isArray(settings.steps) || settings.steps.length === 0) {
+        return NextResponse.json(
+          { error: "لازم تضيف خطوات للسلة المتروكة", code: "STEPS_REQUIRED" },
+          { status: 400 }
+        );
+      }
+      for (const step of settings.steps) {
+        if (!step.templateId) {
+          return NextResponse.json(
+            { error: "لازم تختار قالب لكل خطوة في السلة المتروكة", code: "STEP_TEMPLATE_REQUIRED" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     if (templateId) {
@@ -68,8 +86,8 @@ export async function PUT(req: Request) {
 
     const automation = await prisma.emailAutomation.upsert({
       where: { userId_type: { userId: ownerId, type } },
-      update: { enabled, templateId },
-      create: { userId: ownerId, type, enabled, templateId },
+      update: { enabled, templateId, settings },
+      create: { userId: ownerId, type, enabled, templateId, settings },
       include: { template: { select: { id: true, name: true, subject: true } } },
     });
 
