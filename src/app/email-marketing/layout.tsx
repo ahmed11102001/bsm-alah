@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAppServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import EmailNavbar from "./_components/EmailNavbar";
 import EmailTabsNav from "./_components/EmailTabsNav";
 
 export const metadata: Metadata = {
@@ -40,7 +41,10 @@ export default async function EmailMarketingLayout({
         />
       </div>
 
-      {/* Navbar: brand + channels merged into tabs row */}
+      {/* Top Navbar */}
+      <EmailNavbar initialUser={session.user} />
+
+      {/* Sub-header with Tabs */}
       <EmailTabsNav />
 
       {/* Content Body */}

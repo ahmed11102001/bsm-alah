@@ -669,20 +669,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             )}
             <div id="assistant-header-slot" className="flex items-center" />
 
-            {/* المستخدم → صفحة الإعدادات المشتركة + خروج — زي توب بار الإيميل */}
-            <Link
-              href="/settings"
-              title={locale === "ar" ? "الإعدادات" : "Settings"}
-              className="hidden sm:flex items-center gap-2 rounded-xl border border-border bg-card px-2.5 py-1.5 transition-all hover:border-primary/40 hover:bg-primary/10 active:scale-95"
-            >
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[11px] font-bold text-primary-foreground flex-shrink-0">
-                {initials}
-              </div>
-              <span className="max-w-[110px] truncate text-xs font-semibold text-foreground">
-                {displayName}
-              </span>
-            </Link>
-
             {/* زر القنوات — على الطرف دائمًا في اللغتين */}
             <Link
               href="/channels"

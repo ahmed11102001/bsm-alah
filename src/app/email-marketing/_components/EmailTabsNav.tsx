@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { EMAIL_TABS } from "../constants";
 
@@ -9,30 +8,9 @@ export default function EmailTabsNav() {
   const pathname = usePathname();
 
   return (
-    <div className="sticky top-0 z-40 border-b border-white/10 bg-[#031510]/80 backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center gap-3">
-        {/* Brand + Channels — على الجانب */}
-        <div className="flex items-center gap-2 py-2 flex-shrink-0">
-          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-[#25D366] flex-shrink-0">
-            <img src="/faviconlink.svg" alt="Wani" className="h-full w-full object-cover" />
-          </span>
-          <span className="hidden sm:block text-sm font-extrabold tracking-wider text-white leading-none">
-            WANI
-          </span>
-          <Link
-            href="/channels"
-            title="مركز القنوات"
-            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 active:scale-95"
-          >
-            <ArrowRight className="h-3 w-3 rtl:rotate-180" />
-            <span className="hidden md:inline">القنوات</span>
-          </Link>
-        </div>
-
-        {/* خط طولي فاصل بين البراند وتبويبات الإيميل */}
-        <div className="h-8 w-px bg-white/10 flex-shrink-0" aria-hidden="true" />
-
-        <nav className="flex flex-1 space-x-2 rtl:space-x-reverse overflow-x-auto py-2.5 no-scrollbar" aria-label="Tabs">
+    <div className="border-b border-white/10 bg-[#031510]/60 backdrop-blur-md">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <nav className="flex space-x-2 rtl:space-x-reverse overflow-x-auto py-2.5 no-scrollbar" aria-label="Tabs">
           {EMAIL_TABS.map((tab) => {
             const Icon = tab.icon;
             // التحقق من التاب النشط: إما تطابق كامل، أو إذا كان المسار يبدأ بمسار التاب (مع استثناء overview لئلا يطابق الكل)
