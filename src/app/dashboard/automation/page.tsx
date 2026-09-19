@@ -2,13 +2,7 @@
 import { AutomationPageSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 // ─── Automation.tsx ───────────────────────────────────────────────────────────
-// Tabs:
-//   1. "الأتمتة"  → inner sub-tabs:
-//        - الكلمات  : keyword bot (KEYWORD + TEXT)           — free text ✅
-//        - الترحيب  : first-message (FIRST_MESSAGE + TEXT)   — free text ✅ (reply to incoming)
-//        - الزمنية  : time-based (TIME_BASED + TEMPLATE)     — template ⚠️ (outbound)
-//        - A/B      : splits random contacts → two campaigns
-//   2. "الذكاء الاصطناعي" → unchanged AI agent
+// صفحة قواعد الأتمتة (sub-tabs داخلية). الوكيل الذكي اتنقل لصفحة مستقلة /wani-ai.
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
@@ -32,11 +26,10 @@ import {
   Bot, Plus, MoreVertical, Trash2, Edit2, Loader2, MessageSquare, ImageIcon,
   Zap, ToggleLeft, ToggleRight, CheckCircle, Save, Sparkles, Key,
   X, ListFilter, CornerDownLeft,
-  Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid, Lock,
+  Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, Lock,
 } from "lucide-react";
 import SmartFollowUpTab from "@/app/dashboard/automation/SmartFollowUp/page";
 import PageHeader from "@/components/dashboard/PageHeader";
-import AiAgentDashboard from "@/app/dashboard/automation/_components/AiAgentDashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AutomationButton {
@@ -66,29 +59,8 @@ interface Audience {
   _count?: { contacts: number };
   contacts?: { id: string; phone: string; name: string | null }[];
 }
-interface AIAgent {
-  isEnabled: boolean; provider: "gemini" | "openai";
-  brandName: string; businessDesc: string; productsInfo: string;
-  pricingInfo: string; workingHours: string; tone: string;
-  systemPrompt: string; languageMode: string; websiteUrl: string; websiteButtonText: string; pauseMinutes: number; handoffResumeMinutes: number | null;
-  elevenLabsEnabled: boolean;
-  elevenLabsApiKey: string;
-  elevenLabsAgentId: string;
-  textRepliesEnabled?: boolean;
-  voiceRepliesEnabled?: boolean;
-  elevenLabsVoiceId?: string;
-  elevenLabsModelId?: string;
-}
 type Lang = "ar" | "en";
 const tx = (lang: Lang, ar: string, en: string) => (lang === "ar" ? ar : en);
-const EMPTY_AGENT: AIAgent = {
-  isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
-  productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
-  systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10, handoffResumeMinutes: 3,
-  elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
-  textRepliesEnabled: true,
-  voiceRepliesEnabled: false, elevenLabsVoiceId: "", elevenLabsModelId: "",
-};
 type AutoSubTab = "keywords" | "welcome" | "interactive" | "smart_followup" | "timebased" | "ab";
 
 const DAYS_AR = [
@@ -273,18 +245,12 @@ export default function Automation() {
   const { planTier, dashData } = useSubscription();
   const { locale, dir } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
-  const [activeTab, setActiveTab] = useState<"automation" | "ai">("automation");
   const [activeSubTab, setActiveSubTab] = useState<AutoSubTab>("interactive");
 
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [audiences, setAudiences] = useState<Audience[]>([]);
-  const [agent, setAgent] = useState<AIAgent>({ ...EMPTY_AGENT });
   const [loading, setLoading] = useState(true);
-
-  const [savingAgent, setSavingAgent] = useState(false);
-  const [agentDirty, setAgentDirty] = useState(false);
-  const [agentSaved, setAgentSaved] = useState(false);
 
   const [showDialog, setShowDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState<AutoSubTab>("keywords");
@@ -303,23 +269,9 @@ export default function Automation() {
     varAName: "نسخة أ", varATemplate: "", varBName: "نسخة ب", varBTemplate: "",
   });
   const [launchingAb, setLaunchingAb] = useState(false);
-  const isEnterprise = planTier === "enterprise";
-  // Agent Beta Access يفتح تاب الـ AI (جزء الإيجنت) لغير Max أثناء سريانها
-  const agentBeta = (dashData?.plan as any)?.agentBeta;
-  const betaActive = agentBeta?.active === true;
-  const canUseAi = isEnterprise || betaActive;
   const isProOrAbove = planTier === "pro" || planTier === "enterprise";
   const isFree = planTier === "free";
 
-  const aiLockMsg = tx(
-    lang,
-    betaActive
-      ? "تجربة Agent Beta Access انتهت. رقِّ إلى Max للمتابعة."
-      : "تبويب الذكاء الاصطناعي متاح فقط في باقة Max. قم بترقية الباقة.",
-    betaActive
-      ? "Agent Beta Access ended. Upgrade to Max to continue."
-      : "AI tab is available only on Max plan. Please upgrade."
-  );
   const proLockMsg = tx(
     lang,
     "الميزة متاحة من باقة Pro فما فوق. قم بترقية الباقة.",
@@ -334,41 +286,17 @@ export default function Automation() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rulesRes, agentRes, templatesRes, audRes] = await Promise.all([
-        fetch("/api/automation"), fetch("/api/ai-agent"),
+      const [rulesRes, templatesRes, audRes] = await Promise.all([
+        fetch("/api/automation"),
         fetch("/api/templates"), fetch("/api/audiences"),
       ]);
       const rulesData = await rulesRes.json();
-      const agentData = await agentRes.json();
       const templatesData = await templatesRes.json();
       const audData = await audRes.json();
 
       setRules(Array.isArray(rulesData) ? rulesData : []);
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setAudiences(Array.isArray(audData.audiences) ? audData.audiences : []);
-      setAgent({
-        isEnabled: agentData.isEnabled ?? false,
-        provider: agentData.provider ?? "gemini",
-        brandName: agentData.brandName ?? "",
-        businessDesc: agentData.businessDesc ?? "",
-        productsInfo: agentData.productsInfo ?? "",
-        pricingInfo: agentData.pricingInfo ?? "",
-        workingHours: agentData.workingHours ?? "",
-        tone: agentData.tone ?? "friendly",
-        systemPrompt: agentData.systemPrompt ?? "",
-        languageMode: agentData.languageMode ?? "auto",
-        websiteUrl: agentData.websiteUrl ?? "",
-        websiteButtonText: agentData.websiteButtonText ?? "",
-        pauseMinutes: agentData.pauseMinutes ?? 10,
-        handoffResumeMinutes: agentData.handoffResumeMinutes !== undefined ? agentData.handoffResumeMinutes : 3,
-        elevenLabsEnabled: agentData.elevenLabsEnabled ?? false,
-        elevenLabsApiKey: agentData.elevenLabsApiKey ?? "",
-        elevenLabsAgentId: agentData.elevenLabsAgentId ?? "",
-        textRepliesEnabled: agentData.textRepliesEnabled ?? true,
-        voiceRepliesEnabled: agentData.voiceRepliesEnabled ?? false,
-        elevenLabsVoiceId: agentData.elevenLabsVoiceId ?? "",
-        elevenLabsModelId: agentData.elevenLabsModelId ?? "",
-      });
     } catch { toast.error(tx(lang, "خطأ في تحميل البيانات", "Failed to load data")); }
     finally { setLoading(false); }
   }, []);
@@ -672,20 +600,6 @@ export default function Automation() {
     finally { setLaunchingAb(false); }
   };
 
-  // ─── AI helpers ───────────────────────────────────────────────────────────
-  const saveAgent = async () => {
-    setSavingAgent(true);
-    try {
-      const r = await fetch("/api/ai-agent", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(agent) });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      toast.success(tx(lang, "تم حفظ إعدادات الوكيل الذكي", "AI agent settings saved"));
-      setAgentDirty(false); setAgentSaved(true);
-    } catch (e: any) { toast.error(e.message ?? tx(lang, "خطأ في الحفظ", "Save failed")); }
-    finally { setSavingAgent(false); }
-  };
-
-  const updateAgent = (patch: Partial<AIAgent>) => { setAgent(a => ({ ...a, ...patch })); setAgentDirty(true); setAgentSaved(false); };
   const toggleDay = (day: string) => setRuleForm(f => ({ ...f, days: f.days.includes(day) ? f.days.filter(d => d !== day) : [...f.days, day] }));
 
   // ─── Badge count ──────────────────────────────────────────────────────────
@@ -974,75 +888,13 @@ export default function Automation() {
       {/* ── Page Header ── */}
       <PageHeader
         icon={<Bot className="w-5 h-5 text-primary" />}
-        title={tx(lang, "الأتمتة والذكاء الاصطناعي", "Automation & AI")}
-        subtitle={tx(lang, "ردود تلقائية وقواعد ذكية وإيجنت وني", "Auto-replies, smart rules and the Wani agent")}
+        title={tx(lang, "الأتمتة", "Automation")}
+        subtitle={tx(lang, "ردود تلقائية وقواعد ذكية للمتابعة", "Auto-replies and smart follow-up rules")}
         className="mb-4"
       />
 
-      {/* Agent Beta Access banner — ساري فقط لغير Max أثناء البيتا */}
-      {betaActive && (
-        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-white dark:from-purple-950/30 dark:to-gray-900 px-4 py-3">
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-600 text-white">Agent Beta</span>
-          <p className="text-xs text-gray-600 dark:text-gray-300 flex-1 min-w-[12rem]">
-            {tx(lang,
-              `تجربة الإيجنت سارية — متبقي ${agentBeta?.daysLeft ?? 0} ${((agentBeta?.daysLeft ?? 0) === 1) ? "يوم" : "أيام"} و ${(agentBeta?.remaining ?? 0).toLocaleString("ar-EG")} توكن (Gemini فقط).`,
-              `Agent trial active — ${agentBeta?.daysLeft ?? 0} day(s) and ${(agentBeta?.remaining ?? 0).toLocaleString("en-US")} tokens left (Gemini only).`)}
-          </p>
-          <a href="/checkout?plan=max"
-            className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition">
-            {tx(lang, "الترقية إلى Max", "Upgrade to Max")}
-          </a>
-        </div>
-      )}
-
-      {/* Main Tabs */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 w-fit">
-        {(["automation", "ai"] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => {
-              if (tab === "ai" && !canUseAi) {
-                showLockToast(aiLockMsg);
-                return;
-              }
-              setActiveTab(tab);
-            }}
-            onPointerDown={() => {
-              if (tab === "ai" && !canUseAi) showLockToast(aiLockMsg);
-            }}
-            onMouseEnter={() => {
-              if (tab === "ai" && !canUseAi) showLockToast(aiLockMsg);
-            }}
-            title={tab === "ai" && !canUseAi ? aiLockMsg : undefined}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
-              ${tab === "ai" && !canUseAi
-                ? "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70"
-                : activeTab === tab
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}>
-            {tab === "automation" ? (
-              <LayoutGrid className="w-4 h-4" />
-            ) : (
-              <img
-                src="/aiasstant.svg"
-                alt=""
-                aria-hidden="true"
-                className="w-5 h-5 rounded-full object-cover"
-              />
-            )}
-            {tab === "automation" ? tx(lang, "الأتمتة", "Automation") : tx(lang, "AI وني", "AI Wani")}
-            {tab === "ai" && !canUseAi && <span className="text-[10px]">🔒</span>}
-            {tab === "ai" && canUseAi && !isEnterprise && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600">Beta</span>}
-            {tab === "ai" && agent.isEnabled && <span className="w-2 h-2 rounded-full bg-primary" />}
-          </button>
-        ))}
-      </div>
-
-      {/* Automation Tab */}
-      {activeTab === "automation" && (
-        <>
-          {/* Inner sub-tabs */}
+      {/* Automation content */}
+      {/* Inner sub-tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
             {subTabs.map(st => {
               const isSmart = st.id === "smart_followup";
@@ -1094,11 +946,6 @@ export default function Automation() {
             })}
           </div>
           {renderSubTab()}
-        </>
-      )}
-
-      {/* AI Tab — Phase 2 UX Dashboard, Knowledge Cards & Live Test Chat */}
-      {activeTab === "ai" && <AiAgentDashboard lang={lang} />}
 
       {/* Dialog — shared for keyword / welcome / interactive / timebased */}
       <Dialog open={showDialog} onOpenChange={v => { if (!v) setShowDialog(false); }}>

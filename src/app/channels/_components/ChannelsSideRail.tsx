@@ -46,18 +46,15 @@ export default function ChannelsSideRail({ onConnectStore }: { onConnectStore: (
         <span className="text-[11px] font-semibold text-emerald-100/90">ربط المتجر</span>
       </button>
 
-      {/* وني AI — زر فقط حاليًا */}
-      <button
-        type="button"
+      {/* وني AI — ينقل لصفحة الوكيل الذكي المستقلة */}
+      <Link
+        href="/wani-ai"
         title="وني AI"
-        className="group flex w-[76px] cursor-default flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2 py-3 transition-all duration-200 hover:bg-white/[0.08]"
+        className="group flex w-[76px] flex-col items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] px-2 py-3 transition-all duration-200 hover:bg-emerald-500/[0.14] hover:shadow-lg hover:shadow-emerald-500/10 active:scale-95"
       >
-        <Bot className="h-5 w-5 text-white/60 transition-transform duration-200 group-hover:scale-110" />
-        <span className="text-[11px] font-semibold text-white/70">وني AI</span>
-        <span className="rounded-full bg-white/10 px-1.5 py-px text-[9px] font-medium text-white/40">
-          قريبًا
-        </span>
-      </button>
+        <Bot className="h-5 w-5 text-emerald-300/90 transition-transform duration-200 group-hover:scale-110" />
+        <span className="text-[11px] font-semibold text-emerald-100/90">وني AI</span>
+      </Link>
     </div>
 
       {/* زر عائم للموبايل (الشريط مخفي تحت lg) — يفتح ويزرد الربط */}
