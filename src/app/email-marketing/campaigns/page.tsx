@@ -54,10 +54,11 @@ export default function EmailCampaignsPage() {
     loadData();
   }, [loadData]);
 
-  // تحديث دوري تلقائي لو فيه حملات في حالة QUEUED أو SENDING للمتابعة اللحظية
+  // تحديث دوري تلقائي لو فيه حملات في حالة QUEUED أو SENDING أو SCHEDULED للمتابعة اللحظية
+  // (SCHEDULED عشان القايمة تتحدث تلقائيًا لما الجدولة تتنفذ في ميعادها)
   useEffect(() => {
     const hasActive = campaigns.some(
-      (c) => c.status === "QUEUED" || c.status === "SENDING"
+      (c) => c.status === "QUEUED" || c.status === "SENDING" || c.status === "SCHEDULED"
     );
     if (!hasActive) return;
 
@@ -112,6 +113,53 @@ export default function EmailCampaignsPage() {
       loadData();
     } catch {
       toast.error("حدث خطأ في الاتصال أثناء إنشاء الحملة.");
+    }
+  };
+
+  const handleScheduleCampaign = async (
+    payload: { name: string; subject: string; templateId: string; targetTag: string | null },
+    scheduledAtISO: string
+  ) => {
+    const toastId = toast.loading("جاري إنشاء الحملة وجدولتها...");
+    try {
+      // 1) إنشاء الحملة أولًا زي العادي
+      const res = await fetch("/api/email/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل إنشاء الحملة", { id: toastId });
+        return;
+      }
+
+      // 2) جدولة الإرسال لوقت لاحق
+      const schedRes = await fetch(`/api/email/campaigns/${data.id}/schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scheduledAt: scheduledAtISO }),
+      });
+      const schedData = await schedRes.json();
+      if (schedRes.ok) {
+        const when = new Date(schedData.scheduledAt).toLocaleString("ar-EG", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        toast.success(`تمت جدولة الحملة "${data.name}" — ستُرسل تلقائيًا في ${when} 🕐`, {
+          id: toastId,
+        });
+      } else {
+        toast.error(schedData.error || "تم إنشاء الحملة لكن فشلت جدولتها — تجدها كمسودة", {
+          id: toastId,
+        });
+      }
+
+      loadData();
+    } catch {
+      toast.error("حدث خطأ في الاتصال أثناء جدولة الحملة.", { id: toastId });
     }
   };
 
@@ -202,6 +250,7 @@ export default function EmailCampaignsPage() {
         totalContactsCount={totalContacts}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreateCampaign}
+        onSchedule={handleScheduleCampaign}
       />
 
       {/* Delivery Logs Viewer */}

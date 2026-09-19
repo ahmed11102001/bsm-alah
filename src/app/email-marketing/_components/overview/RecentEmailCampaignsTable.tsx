@@ -30,6 +30,13 @@ export default function RecentEmailCampaignsTable({
             مسودة
           </span>
         );
+      case "SCHEDULED":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 border border-violet-200 px-2 py-0.5 text-[11px] font-bold text-violet-700">
+            <Clock className="h-3 w-3" />
+            مجدولة
+          </span>
+        );
       case "FAILED":
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 text-[11px] font-bold text-rose-700">

@@ -93,6 +93,16 @@ export default function EmailCampaignList({
                   </td>
                   <td className="py-3.5 px-3">
                     <EmailCampaignStatusBadge status={c.status} />
+                    {c.status === "SCHEDULED" && c.scheduledAt && (
+                      <span className="mt-1 block text-[10px] font-medium text-violet-600">
+                        🕐 {new Date(c.scheduledAt).toLocaleString("ar-EG", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
                   </td>
                   <td className="py-3.5 px-3 text-slate-400 text-[11px]">
                     {new Date(c.createdAt).toLocaleDateString("ar-EG", {

@@ -27,6 +27,7 @@ export interface EmailTemplateDTO {
 
 export type EmailCampaignStatus =
   | "DRAFT"
+  | "SCHEDULED"
   | "QUEUED"
   | "SENDING"
   | "COMPLETED"

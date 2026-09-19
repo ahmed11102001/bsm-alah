@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Send, FileText, Users, Sparkles, Check, ArrowLeft, ArrowRight } from "lucide-react";
+import { X, Send, FileText, Users, Sparkles, Check, ArrowLeft, ArrowRight, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import type { EmailTemplateDTO } from "../../types";
 
@@ -20,6 +20,7 @@ export default function CreateEmailCampaignModal({
   totalContactsCount,
   onClose,
   onCreate,
+  onSchedule,
 }: {
   isOpen: boolean;
   templates: EmailTemplateDTO[];
@@ -27,6 +28,7 @@ export default function CreateEmailCampaignModal({
   totalContactsCount: number;
   onClose: () => void;
   onCreate: (campaign: CreateCampaignPayload, sendNow: boolean) => void;
+  onSchedule: (campaign: CreateCampaignPayload, scheduledAtISO: string) => void;
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
@@ -37,8 +39,31 @@ export default function CreateEmailCampaignModal({
   const [targetType, setTargetType] = useState<"ALL" | "TAG">("ALL");
   const [selectedTag, setSelectedTag] = useState<string>(availableTags[0] || "");
   const [submitting, setSubmitting] = useState(false);
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
+  const [scheduledAtLocal, setScheduledAtLocal] = useState("");
 
   if (!isOpen) return null;
+
+  const resetAndClose = () => {
+    onClose();
+    // Reset wizard
+    setStep(1);
+    setName("");
+    setSubject("");
+    setShowSchedulePicker(false);
+    setScheduledAtLocal("");
+  };
+
+  // وقت الجدولة لازم يكون في المستقبل — غير كده زرار التأكيد متعطل.
+  const scheduleDate = scheduledAtLocal ? new Date(scheduledAtLocal) : null;
+  const isScheduleValid =
+    !!scheduleDate &&
+    !Number.isNaN(scheduleDate.getTime()) &&
+    scheduleDate.getTime() > Date.now();
+  // حد أدنى لمدخل التاريخ (الآن + 5 دقايق) — إرشاد بصري فقط، والتحقق الحقيقي أعلاه.
+  const scheduleMinLocal = new Date(Date.now() + 5 * 60 * 1000)
+    .toISOString()
+    .slice(0, 16);
 
   const handleNext = () => {
     if (step === 1) {
@@ -78,11 +103,28 @@ export default function CreateEmailCampaignModal({
       toast.success(`تم حفظ مسودة الحملة "${name}" بنجاح.`);
     }
 
-    onClose();
-    // Reset wizard
-    setStep(1);
-    setName("");
-    setSubject("");
+    resetAndClose();
+  };
+
+  const handleSchedule = () => {
+    if (!isScheduleValid || !scheduleDate) {
+      toast.error("اختر وقتًا في المستقبل لجدولة الحملة");
+      return;
+    }
+    setSubmitting(true);
+    // الأب بينشئ الحملة أولًا (POST create) وبعدين بيجدولها (POST schedule).
+    // رسائل النجاح/الفشل من الأب — هنا بنقفل ونصفّر بس.
+    onSchedule(
+      {
+        name: name.trim(),
+        subject: subject.trim(),
+        templateId: selectedTemplateId,
+        targetTag: targetType === "TAG" ? selectedTag : null,
+      },
+      scheduleDate.toISOString()
+    );
+    setSubmitting(false);
+    resetAndClose();
   };
 
   return (
@@ -243,6 +285,38 @@ export default function CreateEmailCampaignModal({
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600">
               💡 سيتم إرسال الحملة لجهات الاتصال المشتركة فقط، مع استبعاد الملغى اشتراكهم تلقائيًا.
             </div>
+
+            {/* Schedule picker — يظهر عند الضغط على "جدولة لوقت لاحق" */}
+            {showSchedulePicker && (
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-3.5 space-y-2.5">
+                <label className="flex items-center gap-1.5 font-bold text-slate-700 text-xs">
+                  <CalendarClock className="h-4 w-4 text-violet-600" />
+                  اختر موعد الإرسال
+                </label>
+                <input
+                  type="datetime-local"
+                  dir="ltr"
+                  value={scheduledAtLocal}
+                  min={scheduleMinLocal}
+                  onChange={(e) => setScheduledAtLocal(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                />
+                {!isScheduleValid && (
+                  <p className="text-[11px] text-amber-600 font-medium">
+                    ⚠️ اختر وقتًا في المستقبل — لا يمكن جدولة حملة في الماضي.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={submitting || !isScheduleValid}
+                  onClick={handleSchedule}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-violet-500/25 hover:from-violet-700 hover:to-indigo-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  <span>{submitting ? "جاري الجدولة..." : "تأكيد الجدولة"}</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -280,6 +354,19 @@ export default function CreateEmailCampaignModal({
                   className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   حفظ كمسودة
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => setShowSchedulePicker((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-xs font-bold transition-all active:scale-95 ${
+                    showSchedulePicker
+                      ? "border-violet-500 bg-violet-50 text-violet-700"
+                      : "border-violet-200 bg-white text-violet-700 hover:bg-violet-50"
+                  }`}
+                >
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  <span>جدولة لوقت لاحق</span>
                 </button>
                 <button
                   type="button"

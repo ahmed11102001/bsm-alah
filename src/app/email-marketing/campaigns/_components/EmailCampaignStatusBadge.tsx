@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle, FileEdit, Radio } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, FileEdit, Radio, CalendarClock } from "lucide-react";
 import type { EmailCampaignStatus } from "../../types";
 
 export default function EmailCampaignStatusBadge({
@@ -7,6 +7,13 @@ export default function EmailCampaignStatusBadge({
   status: EmailCampaignStatus;
 }) {
   switch (status) {
+    case "SCHEDULED":
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-bold text-violet-700">
+          <CalendarClock className="h-3 w-3" />
+          مجدولة
+        </span>
+      );
     case "COMPLETED":
       return (
         <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">

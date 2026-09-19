@@ -2141,6 +2141,7 @@ model EmailCampaign {
 
 enum EmailCampaignStatus {
   DRAFT
+  SCHEDULED
   QUEUED
   SENDING
   COMPLETED
