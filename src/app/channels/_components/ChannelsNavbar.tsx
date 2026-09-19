@@ -1,13 +1,31 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { LogOut, User, Sparkles, Layers } from "lucide-react";
+import { LogOut, User, Layers, ChevronDown, Settings } from "lucide-react";
 
 export default function ChannelsNavbar({ initialUser }: { initialUser?: { name?: string | null; email?: string | null } }) {
   const { data: session } = useSession();
   const userName = session?.user?.name || initialUser?.name || "المستخدم";
   const userEmail = session?.user?.email || initialUser?.email || "";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#041a14]/80 backdrop-blur-xl transition-all">
@@ -39,12 +57,18 @@ export default function ChannelsNavbar({ initialUser }: { initialUser?: { name?:
         </div>
 
         {/* User profile & actions */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-1.5 backdrop-blur-sm">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+        <div className="relative flex items-center gap-3" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            title="حسابي"
+            className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 backdrop-blur-sm transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 active:scale-95"
+          >
+            <span className="hidden sm:flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 flex-shrink-0">
               <User className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col text-right">
+            </span>
+            <span className="hidden sm:flex flex-col text-right">
               <span className="max-w-[140px] truncate text-xs font-semibold text-white/90">
                 {userName}
               </span>
@@ -53,18 +77,31 @@ export default function ChannelsNavbar({ initialUser }: { initialUser?: { name?:
                   {userEmail}
                 </span>
               )}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="group flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs font-medium text-white/75 transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 active:scale-95"
-            title="تسجيل الخروج"
-          >
-            <LogOut className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-            <span className="hidden xs:inline">خروج</span>
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 text-white/50 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
           </button>
+
+          {menuOpen && (
+            <div className="absolute top-[calc(100%+8px)] end-0 z-50 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#06231a] p-1.5 shadow-2xl shadow-black/60">
+              <Link
+                href="/settings"
+                onClick={() => setMenuOpen(false)}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+              >
+                <Settings className="h-4 w-4 text-emerald-300" />
+                الإعدادات
+              </Link>
+              <div className="my-1 h-px bg-white/10" />
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/10"
+              >
+                <LogOut className="h-4 w-4" />
+                تسجيل الخروج
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

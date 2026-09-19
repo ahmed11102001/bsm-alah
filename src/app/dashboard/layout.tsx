@@ -5,8 +5,7 @@ import "@/app/globals.css";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
-import { signOutWithPushCleanup } from "@/lib/push-client";
+import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
@@ -25,7 +24,7 @@ import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
 import {
-  User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
+  User, Users, Loader2, Shield, Phone, Mail,
   Lock, Sun, Moon, Monitor, Languages, CreditCard, Sparkles, Handshake,
   ChevronLeft, ChevronRight, ChevronDown, PanelLeftClose, PanelLeftOpen,
   Eye, EyeOff, Copy, type LucideIcon,
@@ -287,13 +286,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("trigger-review-prompt", handleTriggerReview);
   }, [dashData]);
 
-  const openSettings = () => {
-    setActiveTopPanel(null);
-    setAccountPanelOpen(false);
-    setMobileMenuOpen(false);
-    router.push("/dashboard/settings");
-  };
-
   const openNotifications = (open: boolean) => {
     setActiveTopPanel(open ? "notifications" : null);
   };
@@ -406,7 +398,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               <img src="/faviconlink.svg" alt="WANI" className="h-full w-full object-cover" />
             </div>
             {!sidebarCollapsed && (
-              <span className="truncate text-lg font-bold">{locale === "ar" ? "وني" : "WANI"}</span>
+              <span className="min-w-0 flex flex-col leading-tight">
+                <span className="truncate text-lg font-bold">{locale === "ar" ? "وني" : "WANI"}</span>
+                <span className="truncate text-[10px] font-semibold text-muted-foreground">
+                  {locale === "ar" ? "واتساب ماركتينج" : "WhatsApp Marketing"}
+                </span>
+              </span>
             )}
           </div>
         </div>
@@ -501,15 +498,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               {accountLinks.length > 0 && (
                 <div className="my-1.5 border-t border-border" />
               )}
-
-              <button
-                type="button"
-                onClick={() => { setAccountPanelOpen(false); openSettings(); }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-foreground/80 transition-colors hover:bg-muted/60"
-              >
-                <Settings className="h-4 w-4 flex-shrink-0" />
-                <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
-              </button>
 
               <LanguageToggle />
               <ThemeToggle />
@@ -620,14 +608,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   <div className="my-1.5 border-t border-border" />
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => { openSettings(); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-foreground/80 hover:bg-muted/60"
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
-                </button>
                 <LanguageToggle />
                 <ThemeToggle />
               </div>
@@ -669,16 +649,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <div className="flex-1 hidden lg:block" />
 
           <div className="flex items-center gap-2">
-            {/* رجوع لمركز القنوات — زي توب بار الإيميل */}
-            <Link
-              href="/channels"
-              title={locale === "ar" ? "الرجوع لمركز القنوات" : "Back to channels"}
-              className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-95"
-            >
-              <ArrowRight className="h-3.5 w-3.5" />
-              <span className="hidden md:inline">{locale === "ar" ? "مركز القنوات" : "Channels"}</span>
-            </Link>
-
             <NotificationBell
               onNavigate={navigateTo}
               lang={locale === "en" ? "en" : "ar"}
@@ -713,15 +683,15 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               </span>
             </Link>
 
-            <button
-              type="button"
-              onClick={() => signOutWithPushCleanup(signOut, { callbackUrl: "/" })}
-              title={t.signOut}
-              className="group flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-medium text-muted-foreground transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-500 active:scale-95"
+            {/* زر القنوات — على الطرف دائمًا في اللغتين */}
+            <Link
+              href="/channels"
+              title={locale === "ar" ? "مركز القنوات" : "Channels hub"}
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-95"
             >
-              <LogOut className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
-              <span className="hidden md:inline">{locale === "ar" ? "خروج" : "Logout"}</span>
-            </button>
+              <ArrowRight className={`h-3.5 w-3.5 ${locale === "ar" ? "" : "rotate-180"}`} />
+              <span className="hidden md:inline">{locale === "ar" ? "القنوات" : "Channels"}</span>
+            </Link>
 
           </div>
         </header>
