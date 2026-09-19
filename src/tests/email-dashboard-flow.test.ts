@@ -10,6 +10,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 import nextConfigExport from "../../next.config";
 import { encryptToken, decryptToken } from "../lib/crypto";
+import { emailEligibilityWhere } from "../lib/email-marketing/eligibility";
 
 describe("Email Marketing Architecture & Services", () => {
   it("next.config.ts rewrites /dashboard/email and sub-paths to /email-marketing", async () => {
@@ -164,13 +165,12 @@ describe("Email Marketing Architecture & Services", () => {
   });
 
   it("verifies CRM unified contact targeting query constraints for email campaigns", () => {
-    // Campaign recipients query must strictly filter contacts with non-null email and SUBSCRIBED status
+    // Campaign recipients query must include contacts with a null emailStatus
+    // (added via CRM/store, never explicitly set) as eligible — only
+    // UNSUBSCRIBED/BOUNCED are excluded. A literal `emailStatus: "SUBSCRIBED"`
+    // filter would wrongly exclude every CRM/store-created contact.
     const buildTargetWhere = (userId: string, targetTag?: string | null) => {
-      const where: any = {
-        userId,
-        email: { not: null },
-        emailStatus: "SUBSCRIBED",
-      };
+      const where: any = emailEligibilityWhere(userId);
       if (targetTag) {
         where.tags = { has: targetTag };
       }
@@ -181,14 +181,20 @@ describe("Email Marketing Architecture & Services", () => {
     expect(generalWhere).toEqual({
       userId: "usr_123",
       email: { not: null },
-      emailStatus: "SUBSCRIBED",
+      OR: [
+        { emailStatus: null },
+        { emailStatus: { notIn: ["UNSUBSCRIBED", "BOUNCED"] } },
+      ],
     });
 
     const taggedWhere = buildTargetWhere("usr_123", "VIP");
     expect(taggedWhere).toEqual({
       userId: "usr_123",
       email: { not: null },
-      emailStatus: "SUBSCRIBED",
+      OR: [
+        { emailStatus: null },
+        { emailStatus: { notIn: ["UNSUBSCRIBED", "BOUNCED"] } },
+      ],
       tags: { has: "VIP" },
     });
   });

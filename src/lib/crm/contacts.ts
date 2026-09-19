@@ -266,6 +266,7 @@ export async function createCrmContact(ownerId: string, input: CrmContactInput) 
       notes: data.notes,
       birthDate: data.birthDate,
       city: data.city,
+      ...(data.email ? { emailStatus: "SUBSCRIBED" as const } : {}),
     },
   });
   return { contact: created, created: true as const };

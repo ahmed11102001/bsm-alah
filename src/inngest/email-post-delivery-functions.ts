@@ -7,6 +7,7 @@
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { sendEmailViaUserSmtp } from "@/lib/email-marketing/sender";
+import { isEligibleForMarketingEmail } from "@/lib/email-marketing/eligibility";
 
 const POST_DELIVERY_DELAY = "7d";
 
@@ -25,12 +26,12 @@ export async function loadOrderContact(userId: string, source: string, orderId: 
   if (orderId === null || orderId === undefined) return null;
   const order = await prisma.storeOrder.findFirst({
     where: { userId, source: source as any, externalId: String(orderId) },
-    select: { id: true, contact: { select: { id: true, email: true, name: true } } },
+    select: { id: true, contact: { select: { id: true, email: true, name: true, emailStatus: true } } },
   });
   const contact = order?.contact;
   const email = contact?.email?.trim();
   if (!order || !contact || !email) return null;
-  return { orderId: order.id, contactId: contact.id, email, name: contact.name };
+  return { orderId: order.id, contactId: contact.id, email, name: contact.name, emailStatus: contact.emailStatus };
 }
 
 export async function sendPostDeliveryEmail(userId: string, source: string, orderId: unknown) {
@@ -40,6 +41,12 @@ export async function sendPostDeliveryEmail(userId: string, source: string, orde
 
   const target = await loadOrderContact(userId, source, orderId);
   if (!target) return { sent: false as const, reason: "no_email" };
+
+  // إعادة تحقق الأهلية لحظة الإرسال — العميل ممكن يكون عمل Unsubscribe خلال
+  // الـ7 أيام انتظار.
+  if (!isEligibleForMarketingEmail({ email: target.email, emailStatus: target.emailStatus })) {
+    return { sent: false as const, reason: "unsubscribed_or_bounced" };
+  }
 
   const delivery = await prisma.emailDelivery.create({
     data: {
@@ -57,6 +64,7 @@ export async function sendPostDeliveryEmail(userId: string, source: string, orde
     subject: automation.template.subject,
     html: automation.template.bodyHtml,
     previewText: automation.template.previewText,
+    contactId: target.contactId,
   });
 
   if (res.success) {

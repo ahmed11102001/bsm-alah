@@ -8,6 +8,7 @@
 import prisma from "@/lib/prisma";
 import { getEmailConnection } from "./connection";
 import { sendEmailViaUserSmtp } from "./sender";
+import { emailEligibilityWhere } from "./eligibility";
 
 export interface BirthdayRunSummary {
   users: number;
@@ -72,10 +73,10 @@ export async function runBirthdayAutomations(now: Date = new Date()): Promise<Bi
 
     const contacts = await prisma.contact.findMany({
       where: {
-        userId: automation.userId,
+        ...emailEligibilityWhere(automation.userId),
         deletedAt: null,
         birthDate: { not: null },
-        AND: [{ email: { not: null } }, { email: { not: "" } }],
+        AND: [{ email: { not: "" } }],
       },
       select: { id: true, email: true, name: true, birthDate: true, lastBirthdayEmailSentAt: true },
     });
@@ -101,6 +102,7 @@ export async function runBirthdayAutomations(now: Date = new Date()): Promise<Bi
         subject: automation.template.subject,
         html: automation.template.bodyHtml,
         previewText: automation.template.previewText,
+        contactId: contact.id,
       });
 
       if (res.success) {

@@ -51,7 +51,10 @@ export async function upsertStoreContact(input: StoreContactInput) {
       return await prisma.contact.upsert({
         where: { phone_userId: { phone, userId } },
         update: updateData,
-        create: { phone, email, birthDate, city, userId, name: input.createName },
+        create: {
+          phone, email, birthDate, city, userId, name: input.createName,
+          ...(email ? { emailStatus: "SUBSCRIBED" as const } : {}),
+        },
       });
     } catch (err) {
       if (isUniqueConflict(err) && email) {
@@ -82,6 +85,6 @@ export async function upsertStoreContact(input: StoreContactInput) {
   return await prisma.contact.upsert({
     where: { email_userId: { email, userId } },
     update: emailUpdateData,
-    create: { email, birthDate, city, userId, name: input.createName },
+    create: { email, birthDate, city, userId, name: input.createName, emailStatus: "SUBSCRIBED" },
   });
 }

@@ -1,6 +1,8 @@
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { sendEmailViaProvider } from "@/lib/email-marketing/send";
+import { wrapWithUnsubscribeFooter } from "@/lib/email-marketing/sender";
+import { isEligibleForMarketingEmail } from "@/lib/email-marketing/eligibility";
 
 export const emailCartAbandonedSteps = inngest.createFunction(
   {
@@ -32,21 +34,27 @@ export const emailCartAbandonedSteps = inngest.createFunction(
       if (customerEmail) {
         return prisma.contact.findFirst({
           where: { userId, email: customerEmail },
-          select: { id: true, email: true, name: true }
+          select: { id: true, email: true, name: true, emailStatus: true }
         }) || prisma.contact.findFirst({
           where: { userId, phone: customerPhone },
-          select: { id: true, email: true, name: true }
+          select: { id: true, email: true, name: true, emailStatus: true }
         });
       }
       return prisma.contact.findFirst({
         where: { userId, phone: customerPhone },
-        select: { id: true, email: true, name: true },
+        select: { id: true, email: true, name: true, emailStatus: true },
       });
     });
 
     const targetEmail = contact?.email || customerEmail;
     if (!targetEmail) {
       return { skipped: true, reason: "no_email_address" };
+    }
+
+    // Contact عمل Unsubscribe/Bounced فعليًا في نظامنا → منستبعدش الإيميل
+    // الخام لو ملوش Contact مربوط (مفيش حاجة نتحقق منها في الحالة دي أصلاً)
+    if (contact && !isEligibleForMarketingEmail(contact)) {
+      return { skipped: true, reason: "unsubscribed_or_bounced" };
     }
 
     const cartAbandonedTime = new Date();
@@ -81,6 +89,25 @@ export const emailCartAbandonedSteps = inngest.createFunction(
         return { stopped: true, reason: "order_completed" };
       }
 
+      // إعادة تحقق الأهلية فريش قبل كل إرسال — ممكن يكون العميل عمل
+      // Unsubscribe في الفترة اللي فاتت من وقت الـstep اللي قبل كده (فيه
+      // أيام بينهم بسبب step.sleep)، مش كفاية نتحقق مرة واحدة في الأول.
+      const stillEligible = await step.run(`check-eligibility-${i + 1}`, async () => {
+        if (!contact?.id) return true; // مفيش Contact مربوط، مفيش حاجة نتحقق منها
+        const fresh = await prisma.contact.findUnique({
+          where: { id: contact.id },
+          select: { email: true, emailStatus: true },
+        });
+        return isEligibleForMarketingEmail({
+          email: fresh?.email ?? contact.email,
+          emailStatus: fresh?.emailStatus ?? null,
+        });
+      });
+
+      if (!stillEligible) {
+        return { stopped: true, reason: "unsubscribed_or_bounced" };
+      }
+
       // Send the email for this step
       await step.run(`send-email-step-${i + 1}`, async () => {
         const template = await prisma.emailTemplate.findFirst({
@@ -102,6 +129,7 @@ export const emailCartAbandonedSteps = inngest.createFunction(
         let html = template.bodyHtml;
         const nameToUse = contact?.name || customerName || "عميلنا العزيز";
         html = html.replace(/{{name}}/g, nameToUse);
+        if (contact?.id) html = wrapWithUnsubscribeFooter(html, contact.id);
 
         const res = await sendEmailViaProvider({
           connection: emailConnection,

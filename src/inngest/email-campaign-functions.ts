@@ -9,6 +9,7 @@
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { sendEmailViaUserSmtp } from "@/lib/email-marketing/sender";
+import { emailEligibilityWhere } from "@/lib/email-marketing/eligibility";
 
 const CHUNK_SIZE = 50;
 
@@ -46,12 +47,8 @@ export const processEmailCampaign = inngest.createFunction(
         return { alreadyCompleted: true, total: campaign.targetCount };
       }
 
-      // جلب جهات الاتصال النشطة المؤهلة — CRM Contact with email
-      const whereContacts: any = {
-        userId,
-        email: { not: null },
-        emailStatus: "SUBSCRIBED",
-      };
+      // جلب جهات الاتصال النشطة المؤهلة (عندها إيميل، ومش UNSUBSCRIBED/BOUNCED)
+      const whereContacts: any = emailEligibilityWhere(userId);
       if (campaign.targetTag) {
         whereContacts.tags = { has: campaign.targetTag };
       }
@@ -110,105 +107,112 @@ export const processEmailCampaign = inngest.createFunction(
       return { success: true, total: prep.total, completed: true };
     }
 
-    // ── Step 2: المعالجة على دفعات (Chunks) لضمان عدم حدوث Timeout ─────────────
+    // ── Step 2: المعالجة على دفعات — كل رسالة لوحدها step.run مستقلة ───────────
+    // ليه كده؟ Inngest بيعمل memoization لكل step.run بناءً على الـid بتاعه:
+    // لو نفس الـid اتنفذ قبل كده بنجاح، مش هيتنفذ تاني حتى لو الفنكشن كله
+    // اتعاد (بعد فشل/إعادة محاولة). لما كانت كل الدفعة (chunk) جوه step.run
+    // واحد، فشل في نص الدفعة كان معناه إعادة إرسال الرسايل اللي فعلاً نجحت
+    // في نفس المحاولة اللي فشلت. دلوقتي كل رسالة لوحدها step.run بـid ثابت
+    // (send-delivery-<id>) — لو الفنكشن وقع بعد نجاح 3 من أصل 10، إعادة
+    // المحاولة هتلاقي التلاتة دول memoized وتكمل من الرابعة بس.
+    //
+    // جلب القالب مرة واحدة قبل الحلقة (مش بيتغير أثناء الإرسال).
+    const campaignData = await step.run("get-campaign-template", async () => {
+      const campaign = await prisma.emailCampaign.findUnique({
+        where: { id: campaignId },
+        include: { template: true },
+      });
+      if (!campaign || !campaign.template) {
+        throw new Error("بيانات الحملة أو القالب مفقودة أثناء الإرسال");
+      }
+      return {
+        subject: campaign.subject,
+        bodyHtml: campaign.template.bodyHtml,
+        previewText: campaign.template.previewText,
+      };
+    });
+
     let hasMore = true;
     let chunkIndex = 0;
 
     while (hasMore) {
-      const chunkResult = await step.run(`send-chunk-${chunkIndex}`, async () => {
-        // جلب الرسائل التي لم يتم تسليمها بعد
-        const pendingDeliveries = await prisma.emailDelivery.findMany({
-          where: {
-            campaignId,
-            status: "QUEUED",
-          },
+      // fetch خفيف بس — بيرجع أول CHUNK_SIZE رسالة لسه QUEUED. مفيش حاجة
+      // لـcursor: الرسايل اللي اتعالجت بيتغير status بتاعها فعليًا في الـDB،
+      // فكل مرة الاستعلام ده بيرجع الدفعة الجاية تلقائيًا.
+      const pendingDeliveries = await step.run(`fetch-chunk-${chunkIndex}`, async () => {
+        return prisma.emailDelivery.findMany({
+          where: { campaignId, status: "QUEUED" },
           take: CHUNK_SIZE,
           orderBy: { createdAt: "asc" },
+          select: { id: true, contactId: true, contactEmail: true, contactName: true },
         });
+      });
 
-        if (pendingDeliveries.length === 0) {
-          return { done: true, processed: 0, delivered: 0, failed: 0 };
-        }
+      if (pendingDeliveries.length === 0) {
+        hasMore = false;
+        break;
+      }
 
-        const campaign = await prisma.emailCampaign.findUnique({
-          where: { id: campaignId },
-          include: { template: true },
-        });
-
-        if (!campaign || !campaign.template) {
-          throw new Error("بيانات الحملة أو القالب مفقودة أثناء الإرسال");
-        }
-
-        let chunkDelivered = 0;
-        let chunkFailed = 0;
-
-        for (const delivery of pendingDeliveries) {
-          try {
-            const sendResult = await sendEmailViaUserSmtp(userId, {
-              to: delivery.contactEmail,
-              recipientName: delivery.contactName,
-              subject: campaign.subject,
-              html: campaign.template.bodyHtml,
-              previewText: campaign.template.previewText,
-            });
-
-            if (sendResult.success) {
-              chunkDelivered++;
-              await prisma.emailDelivery.update({
-                where: { id: delivery.id },
-                data: {
-                  status: "SENT",
-                  sentAt: new Date(),
-                  errorMessage: null,
-                },
+      for (const delivery of pendingDeliveries) {
+        // كل رسالة لوحدها — النتيجة لازم تكون serializable (زي القديمة بالظبط)
+        const result: { success: boolean; error?: string } = await step.run(
+          `send-delivery-${delivery.id}`,
+          async () => {
+            let sendResult: { success: boolean; error?: string };
+            try {
+              sendResult = await sendEmailViaUserSmtp(userId, {
+                to: delivery.contactEmail,
+                recipientName: delivery.contactName,
+                subject: campaignData.subject,
+                html: campaignData.bodyHtml,
+                previewText: campaignData.previewText,
+                contactId: delivery.contactId,
               });
-            } else {
-              chunkFailed++;
-              await prisma.emailDelivery.update({
+            } catch (err: any) {
+              sendResult = { success: false, error: err?.message || "خطأ تقني أثناء الإرسال" };
+            }
+
+            // تحديث حالة الرسالة + عداد الحملة في transaction واحدة — لو حصل
+            // خطأ DB عرضي هنا، الـstep كله بيفشل ويترمي (من غير ما نكون
+            // سجّلنا نص تحديث)، فإعادة محاولة Inngest هتعيد نفس المنطق من
+            // الأول بأمان (لسه مفيش حاجة اتسجلت)، بدل ما تسجل نجاح جزئي
+            // ملوّث بعداد متكرر.
+            if (sendResult.success) {
+              await prisma.$transaction([
+                prisma.emailDelivery.update({
+                  where: { id: delivery.id },
+                  data: { status: "SENT", sentAt: new Date(), errorMessage: null },
+                }),
+                prisma.emailCampaign.update({
+                  where: { id: campaignId },
+                  data: { sentCount: { increment: 1 }, deliveredCount: { increment: 1 } },
+                }),
+              ]);
+              return { success: true };
+            }
+
+            await prisma.$transaction([
+              prisma.emailDelivery.update({
                 where: { id: delivery.id },
                 data: {
                   status: "FAILED",
                   errorMessage: sendResult.error || "فشل الإرسال عبر خادم البريد",
                   sentAt: new Date(),
                 },
-              });
-            }
-          } catch (err: any) {
-            chunkFailed++;
-            await prisma.emailDelivery.update({
-              where: { id: delivery.id },
-              data: {
-                status: "FAILED",
-                errorMessage: err?.message || "خطأ تقني أثناء الإرسال",
-                sentAt: new Date(),
-              },
-            });
+              }),
+              prisma.emailCampaign.update({
+                where: { id: campaignId },
+                data: { sentCount: { increment: 1 }, failedCount: { increment: 1 } },
+              }),
+            ]);
+            return { success: false, error: sendResult.error };
           }
-        }
-
-        // تحديث تقدم الحملة تراكميًا
-        await prisma.emailCampaign.update({
-          where: { id: campaignId },
-          data: {
-            sentCount: { increment: pendingDeliveries.length },
-            deliveredCount: { increment: chunkDelivered },
-            failedCount: { increment: chunkFailed },
-          },
-        });
-
-        return {
-          done: pendingDeliveries.length < CHUNK_SIZE,
-          processed: pendingDeliveries.length,
-          delivered: chunkDelivered,
-          failed: chunkFailed,
-        };
-      });
-
-      if (chunkResult.done) {
-        hasMore = false;
-      } else {
-        chunkIndex++;
+        );
+        void result; // العداد اتحدّث فعليًا جوه الـstep نفسه (transaction) — هنا بس عشان النوع
       }
+
+      if (pendingDeliveries.length < CHUNK_SIZE) hasMore = false;
+      else chunkIndex++;
     }
 
     // ── Step 3: إنهاء الحملة وتوثيق النتائج النهائية ────────────────────────────

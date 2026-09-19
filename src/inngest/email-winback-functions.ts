@@ -1,6 +1,8 @@
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { sendEmailViaProvider } from "@/lib/email-marketing/send";
+import { wrapWithUnsubscribeFooter } from "@/lib/email-marketing/sender";
+import { emailEligibilityWhere } from "@/lib/email-marketing/eligibility";
 
 export const emailWinbackDailyCron = inngest.createFunction(
   {
@@ -66,10 +68,15 @@ export const emailWinbackDailyCron = inngest.createFunction(
                 }
               }
             },
-            OR: [
-              { winbackEmailSentAt: null },
-              { winbackEmailSentAt: { lt: thresholdDateForPreviousEmails } }
-            ]
+            AND: [
+              { OR: emailEligibilityWhere(automation.userId).OR },
+              {
+                OR: [
+                  { winbackEmailSentAt: null },
+                  { winbackEmailSentAt: { lt: thresholdDateForPreviousEmails } }
+                ]
+              },
+            ],
           },
           select: {
             id: true,
@@ -101,6 +108,7 @@ export const emailWinbackDailyCron = inngest.createFunction(
             let html = automation.template!.bodyHtml;
             const nameToUse = contact.name || "عميلنا العزيز";
             html = html.replace(/{{name}}/g, nameToUse);
+            html = wrapWithUnsubscribeFooter(html, contact.id);
 
             const res = await sendEmailViaProvider({
               connection: automation.user.emailConnection!,

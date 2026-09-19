@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppServerSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { emailEligibilityWhere } from "@/lib/email-marketing/eligibility";
 
 function resolveOwnerId(session: any): string {
   if (session.user.role === "OWNER") return session.user.id as string;
@@ -26,7 +27,7 @@ export async function GET() {
       recentDeliveries,
     ] = await Promise.all([
       prisma.contact.count({ where: { userId: ownerId, email: { not: null } } }),
-      prisma.contact.count({ where: { userId: ownerId, email: { not: null }, emailStatus: "SUBSCRIBED" } }),
+      prisma.contact.count({ where: emailEligibilityWhere(ownerId) }),
       prisma.emailCampaign.count({ where: { userId: ownerId } }),
       prisma.emailCampaign.aggregate({
         where: { userId: ownerId },

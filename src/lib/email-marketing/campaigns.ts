@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { sendEmailViaUserSmtp } from "./sender";
 import { inngest } from "@/inngest/client";
+import { emailEligibilityWhere } from "./eligibility";
 
 export interface CreateCampaignInput {
   name: string;
@@ -70,12 +71,8 @@ export async function createEmailCampaign(
   userId: string,
   input: CreateCampaignInput
 ) {
-  // حساب عدد المستهدفين مبدئيًا — CRM Contact with email + SUBSCRIBED status
-  const whereContacts: any = {
-    userId,
-    email: { not: null },
-    emailStatus: "SUBSCRIBED",
-  };
+  // حساب عدد المستهدفين مبدئيًا — CRM Contact مؤهل لإيميل تسويقي
+  const whereContacts: any = emailEligibilityWhere(userId);
   if (input.targetTag) {
     whereContacts.tags = { has: input.targetTag };
   }
@@ -119,12 +116,8 @@ export async function queueCampaignSending(userId: string, campaignId: string) {
     throw new Error("الحملة أو القالب المطلوب غير موجود.");
   }
 
-  // حساب عدد المستهدفين — CRM Contact with email + SUBSCRIBED
-  const whereContacts: any = {
-    userId,
-    email: { not: null },
-    emailStatus: "SUBSCRIBED",
-  };
+  // حساب عدد المستهدفين — CRM Contact مؤهل لإيميل تسويقي
+  const whereContacts: any = emailEligibilityWhere(userId);
   if (campaign.targetTag) {
     whereContacts.tags = { has: campaign.targetTag };
   }
@@ -180,11 +173,7 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
     throw new Error("الحملة أو القالب المطلوب غير موجود.");
   }
 
-  const whereContacts: any = {
-    userId,
-    email: { not: null },
-    emailStatus: "SUBSCRIBED",
-  };
+  const whereContacts: any = emailEligibilityWhere(userId);
   if (campaign.targetTag) {
     whereContacts.tags = { has: campaign.targetTag };
   }
@@ -238,6 +227,7 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
       subject: campaign.subject,
       html: campaign.template.bodyHtml,
       previewText: campaign.template.previewText,
+      contactId: del.contactId,
     });
 
     if (res.success) {

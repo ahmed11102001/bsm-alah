@@ -7,6 +7,33 @@ export interface SendEmailPayload {
   subject: string;
   html: string;
   previewText?: string | null;
+  /** لازم لبناء رابط Unsubscribe في فوتر الإيميل. اختياري بس لحالة test-send
+   *  (معاينة قالب لإيميل الأدمن نفسه — مش إرسال تسويقي حقيقي لعميل) — لو
+   *  مش موجود، الفوتر ميتضافش. أي إرسال حقيقي لحملة/أتمتة لازم يبعته دايمًا. */
+  contactId?: string;
+}
+
+function unsubscribeBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://aiwni.com"
+  ).replace(/\/$/, "");
+}
+
+/**
+ * بيضيف فوتر ثابت فيه رابط Unsubscribe شغال في آخر أي إيميل تسويقي.
+ * نقطة واحدة مشتركة يمر بيها كل إرسال (حملة أو أتمتة) — بدل ما كل ملف
+ * يكتب الفوتر ده بنفسه ويتنسى في مكان.
+ */
+export function wrapWithUnsubscribeFooter(html: string, contactId: string): string {
+  const unsubscribeUrl = `${unsubscribeBaseUrl()}/unsubscribe?c=${encodeURIComponent(contactId)}`;
+  const footer = `
+    <hr style="margin-top:24px;border:none;border-top:1px solid #e5e5e5" />
+    <p style="font-size:12px;color:#888;margin-top:12px;font-family:sans-serif">
+      لو مش عايز تستقبل رسايل زي دي تاني،
+      <a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline">إلغاء الاشتراك</a>
+    </p>
+  `;
+  return `${html}${footer}`;
 }
 
 export async function sendEmailViaUserSmtp(
@@ -41,9 +68,12 @@ export async function sendEmailViaUserSmtp(
       .replace(/\{\{name\}\}/g, nameToUse)
       .replace(/\{\{email\}\}/g, payload.to);
 
-    const personalizedHtml = payload.html
+    const bodyWithVars = payload.html
       .replace(/\{\{name\}\}/g, nameToUse)
       .replace(/\{\{email\}\}/g, payload.to);
+    const personalizedHtml = payload.contactId
+      ? wrapWithUnsubscribeFooter(bodyWithVars, payload.contactId)
+      : bodyWithVars;
 
     const info = await transporter.sendMail({
       from: `"${connection.fromName}" <${connection.fromEmail}>`,

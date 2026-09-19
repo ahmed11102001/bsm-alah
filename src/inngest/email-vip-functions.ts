@@ -1,6 +1,8 @@
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { sendEmailViaProvider } from "@/lib/email-marketing/send";
+import { wrapWithUnsubscribeFooter } from "@/lib/email-marketing/sender";
+import { isEligibleForMarketingEmail } from "@/lib/email-marketing/eligibility";
 
 export const emailVipQualified = inngest.createFunction(
   {
@@ -24,11 +26,15 @@ export const emailVipQualified = inngest.createFunction(
       // 2. Get contact and check if they have email and haven't received VIP yet
       const contact = await prisma.contact.findUnique({
         where: { id: contactId },
-        select: { id: true, email: true, name: true, vipEmailSentAt: true },
+        select: { id: true, email: true, name: true, vipEmailSentAt: true, emailStatus: true },
       });
 
       if (!contact || !contact.email) {
         return { skipped: true, reason: "no_email" };
+      }
+
+      if (!isEligibleForMarketingEmail(contact)) {
+        return { skipped: true, reason: "unsubscribed_or_bounced" };
       }
 
       if (contact.vipEmailSentAt) {
@@ -56,6 +62,7 @@ export const emailVipQualified = inngest.createFunction(
       let html = template.bodyHtml;
       const nameToUse = contact.name || "عميلنا العزيز";
       html = html.replace(/{{name}}/g, nameToUse);
+      html = wrapWithUnsubscribeFooter(html, contact.id);
 
       const res = await sendEmailViaProvider({
         connection: emailConnection,
