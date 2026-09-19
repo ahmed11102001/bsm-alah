@@ -8,7 +8,7 @@ import {
   CheckCircle2, AlertTriangle, Trash2, Shield, Link as LinkIcon, Loader2, Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CopyInput } from "./CopyInput";
+import { CopyInput } from "@/app/dashboard/api/_components/CopyInput";
 
 export interface EasyOrdersLabels {
   storeLabel: string;

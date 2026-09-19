@@ -1077,7 +1077,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       <div className="text-[11px] text-muted-foreground mb-4 flex items-center gap-1">
                         <Info className="w-3.5 h-3.5" />
                         {isAr ? "مفيش متجر متصل؟" : "No store connected?"}
-                        <a href="/dashboard/store" className="text-emerald-600 hover:underline font-semibold">{isAr ? "اربط متجرك من هنا" : "Connect your store here"}</a>
+                        <a href="/channels?connectStore=1" className="text-emerald-600 hover:underline font-semibold">{isAr ? "اربط متجرك من هنا" : "Connect your store here"}</a>
                       </div>
                     )}
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { getAppServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { LanguageProvider } from "@/lib/language-context";
 import ChannelsNavbar from "./_components/ChannelsNavbar";
 
 export const metadata: Metadata = {
@@ -19,8 +21,12 @@ export default async function ChannelsLayout({
     redirect("/ar?openLogin=1&callbackUrl=/dashboard/channels");
   }
 
+  const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;
+  const dir = cookieLocale === "en" ? "ltr" : "rtl";
+
   return (
-    <div className="relative min-h-screen min-h-[100dvh] bg-[#031913] text-foreground font-sans selection:bg-emerald-500/30 selection:text-emerald-200 overflow-x-hidden flex flex-col" dir="rtl">
+    <LanguageProvider>
+    <div className="relative min-h-screen min-h-[100dvh] bg-[#031913] text-foreground font-sans selection:bg-emerald-500/30 selection:text-emerald-200 overflow-x-hidden flex flex-col" dir={dir}>
       {/* Background ambient lighting and grid */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         {/* Ambient gradients */}
@@ -51,5 +57,6 @@ export default async function ChannelsLayout({
         <p>© {new Date().getFullYear()} WANI — منصة واتساب للأعمال وقنوات التواصل الذكية</p>
       </footer>
     </div>
+    </LanguageProvider>
   );
 }

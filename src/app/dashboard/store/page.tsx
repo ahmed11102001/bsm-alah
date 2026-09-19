@@ -106,6 +106,12 @@ export default function Store({ onOpenChat }: StoreProps) {
         <p className="text-gray-400 dark:text-gray-500 text-sm">
           {tr("noStoreSub", lang)}
         </p>
+        <a
+          href="/channels?connectStore=1"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold px-5 py-2.5 transition-colors"
+        >
+          {lang === "ar" ? "اربط متجرك من مركز القنوات" : "Connect your store from Channels"}
+        </a>
       </div>
     );
   }

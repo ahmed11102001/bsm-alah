@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeShopDomain } from "@/lib/shopify-domain";
-import { CopyInput } from "./CopyInput";
+import { CopyInput } from "@/app/dashboard/api/_components/CopyInput";
 
 export interface ShopifyStatus {
   connected: boolean;

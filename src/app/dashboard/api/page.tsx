@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { saveWhatsAppSettings } from "@/app/actions/whatsapp";
 import { CheckCircle, Blocks } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
@@ -9,20 +9,17 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription } from "@/lib/dashboard-context";
 
+import Link from "next/link";
 import { CardId, CategoryId, CATEGORIES, CardDef } from "./_types";
 import { DisconnectModal, UpgradeModal } from "./_components/Modals";
 import { IntegrationCard } from "./_components/IntegrationCard";
-import { ShopifyScopesBox } from "./_components/ShopifyScopesBox";
 import { WhatsAppIntegration } from "./_components/WhatsAppIntegration";
-import { ShopifyIntegration, type ShopifyStatus } from "./_components/ShopifyIntegration";
-import { EasyOrdersIntegration } from "./_components/EasyOrdersIntegration";
-import { WooCommerceIntegration } from "./_components/WooCommerceIntegration";
 import { ClaudeIntegration } from "./_components/ClaudeIntegration";
 import { ElevenLabsIntegration } from "./_components/ElevenLabsIntegration";
 import { WebhookIntegration } from "./_components/WebhookIntegration";
 
 export default function API() {
-  const { dashData, canStore: canUseStoreIntegrations, canUseClaude, planTier, isSuper, metaTokenStatus } = useSubscription();
+  const { dashData, canUseClaude, planTier, metaTokenStatus } = useSubscription();
   const initialData = dashData?.whatsapp;
   const { t, dir, locale } = useLanguage();
   const api = t.api;
@@ -35,37 +32,6 @@ export default function API() {
   const [waData, setWaData] = useState<{ phoneNumberId?: string; wabaId?: string } | null>(null);
   const [waJustConnected, setWaJustConnected] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── EasyOrders States ──
-  const [eoApiKey, setEoApiKey] = useState("");
-  const [eoStoreName, setEoStoreName] = useState("");
-  const [eoWebhookUrl, setEoWebhookUrl] = useState("");
-  const [eoUrlLoaded, setEoUrlLoaded] = useState(false);
-  const [eoSyncing, setEoSyncing] = useState(false);
-  const [eoWebhookSecretOrders, setEoWebhookSecretOrders] = useState("");
-  const [eoSavingSecretOrders, setEoSavingSecretOrders] = useState(false);
-  const [eoWebhookSecretStatusUpdate, setEoWebhookSecretStatusUpdate] = useState("");
-  const [eoSavingSecretStatusUpdate, setEoSavingSecretStatusUpdate] = useState(false);
-  const [eoStatus, setEoStatus] = useState<{
-    connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string;
-    webhookOrdersConfigured?: boolean; webhookStatusUpdateConfigured?: boolean;
-  } | null>(null);
-
-  // ── Shopify States ──
-  const [shopifyStatus, setShopifyStatus] = useState<ShopifyStatus | null>(null);
-  const [shStoreName, setShStoreName] = useState("");
-  const [shShopDomain, setShShopDomain] = useState("");
-  const [shClientId, setShClientId] = useState("");
-  const [shClientSecret, setShClientSecret] = useState("");
-  const [shWebhookUrl, setShWebhookUrl] = useState("");
-  const [, setShUrlLoaded] = useState(false);
-  const [shConnecting, setShConnecting] = useState(false);
-  const [shSyncing, setShSyncing] = useState(false);
-
-  // ── WooCommerce States ──
-  const [wooStatus, setWooStatus] = useState<{
-    connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string | null;
-  } | null>(null);
 
   // ── Generic Webhook States ──
   const [verifyToken, setVerifyToken] = useState("");
@@ -93,47 +59,6 @@ export default function API() {
   }>({ open: false, title: "", description: "" });
 
   // ── Load initial data ───────────────────────────────────────────────────────
-  const loadShopifyStatus = useCallback(async () => {
-    if (!canUseStoreIntegrations) return;
-    try {
-      const shUrlRes = await fetch("/api/shopify/URL").catch(() => null);
-      const shUrl = shUrlRes?.ok ? await shUrlRes.json() : {};
-      const url = shUrl?.url ?? "";
-
-      setShWebhookUrl(url);
-      setShUrlLoaded(true);
-
-      if (shUrl?.connected) {
-        setShopifyStatus({
-          connected: true,
-          storeName: shUrl.storeName,
-          connectedAt: shUrl.connectedAt,
-          webhookUrl: url,
-          authMethod: shUrl.authMethod,
-        });
-      } else {
-        setShopifyStatus({ connected: false, webhookUrl: url });
-      }
-
-      const storeRes = await fetch("/api/store").catch(() => null);
-      if (!storeRes?.ok) return;
-      const d = await storeRes.json();
-
-      if (d.woocommerce) {
-        setWooStatus({
-          connected: true,
-          storeName: d.woocommerce.storeName,
-          totalSynced: d.woocommerce.totalSynced,
-          lastSyncAt: d.woocommerce.lastSyncAt,
-        });
-      } else {
-        setWooStatus({ connected: false });
-      }
-    } catch (e) {
-      console.error("[loadShopifyStatus]", e);
-    }
-  }, [canUseStoreIntegrations]);
-
   useEffect(() => {
     if (initialData?.phoneNumberId && initialData?.wabaId) {
       // waConnected = true حتى لو التوكن معطوب — المعرّفات موجودة (الكارد بيعرض "connected" أو "broken")
@@ -152,12 +77,6 @@ export default function API() {
 
   useEffect(() => {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => {});
-    if (canUseStoreIntegrations) {
-      fetch("/api/easy-orders/sync")
-        .then(async r => (r.ok ? r.json() : null))
-        .then(d => { if (d) setEoStatus(d); })
-        .catch(err => console.error("[EasyOrders] Status fetch error", err));
-    }
     if (canUseClaude) {
       fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => {});
     }
@@ -171,51 +90,24 @@ export default function API() {
       setElevenLabsVoiceId(d.elevenLabsVoiceId ?? "");
     }).catch(() => {});
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
-    loadShopifyStatus();
     return () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
-  }, [canUseClaude, canUseStoreIntegrations, loadShopifyStatus]);
-
-  const loadEoWebhookUrl = useCallback(async () => {
-    if (eoUrlLoaded) return;
-    try {
-      const r = await fetch("/api/easy-orders/URL");
-      const d = await r.json();
-      if (d.url) { setEoWebhookUrl(d.url); setEoUrlLoaded(true); }
-    } catch {}
-  }, [eoUrlLoaded]);
+  }, [canUseClaude]);
 
   // ── Plan Lock Messages ──
-  const lockMessage = locale === "ar"
-    ? "ربط المتاجر متاح من باقة Pro فما فوق. قم بترقية الباقة."
-    : "Store integrations are available on Pro plan and above. Please upgrade.";
   const claudeLockMessage = locale === "ar"
     ? "Claude AI غير مناسب لباقتك الحالية. قم بالترقية للاستفادة منه."
     : "Claude AI is available on Pro plan and above. Please upgrade.";
   const canUseElevenLabs = planTier === "pro" || planTier === "enterprise";
   const elevenLabsLockMessage = "ElevenLabs integration is available on Pro and above. Please upgrade.";
-  const isStoreCardLocked = (id: CardId) =>
-    !canUseStoreIntegrations && (id === "shopify" || id === "easyorders" || id === "woocommerce");
   const isClaudeCardLocked = (id: CardId) => !canUseClaude && id === "claude";
   const isElevenLabsCardLocked = (id: CardId) => !canUseElevenLabs && id === "elevenlabs";
-  const isCardLocked = (id: CardId) => isStoreCardLocked(id) || isClaudeCardLocked(id) || isElevenLabsCardLocked(id);
+  const isCardLocked = (id: CardId) => isClaudeCardLocked(id) || isElevenLabsCardLocked(id);
   const getCardLockMessage = (id: CardId) =>
-    isClaudeCardLocked(id) ? claudeLockMessage : isElevenLabsCardLocked(id) ? elevenLabsLockMessage : lockMessage;
+    isClaudeCardLocked(id) ? claudeLockMessage : elevenLabsLockMessage;
 
   const handleCardClick = (id: CardId) => {
     if (isCardLocked(id)) {
       const upgradeDetails: Record<string, { title: string; description: string }> = {
-        shopify: {
-          title: locale === "ar" ? "ربط Shopify — باقة Pro+" : "Shopify — Pro+ Plan",
-          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
-        },
-        easyorders: {
-          title: locale === "ar" ? "ربط EasyOrders — باقة Pro+" : "EasyOrders — Pro+ Plan",
-          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
-        },
-        woocommerce: {
-          title: locale === "ar" ? "ربط WooCommerce — باقة Pro+" : "WooCommerce — Pro+ Plan",
-          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
-        },
         claude: {
           title: "Claude AI — Pro+",
           description: locale === "ar" ? "Claude AI غير متاح لباقتك الحالية. قم بالترقية للوصول إليه." : "Claude AI requires Pro or above. Upgrade to access it.",
@@ -225,12 +117,11 @@ export default function API() {
           description: locale === "ar" ? "ربط ElevenLabs يحتاج باقة Pro أو أعلى لتفعيل الردود الصوتية." : "ElevenLabs requires Pro or above for voice replies.",
         },
       };
-      const d = upgradeDetails[id] ?? upgradeDetails.shopify;
+      const d = upgradeDetails[id] ?? upgradeDetails.claude;
       setUpgradeModal({ open: true, title: d.title, description: d.description });
       return;
     }
     setOpenCard(prev => (prev === id ? null : id));
-    if (id === "easyorders") loadEoWebhookUrl();
   };
 
   // ── ElevenLabs Handlers ──
@@ -385,210 +276,6 @@ export default function API() {
     });
   };
 
-  // ── EasyOrders Handlers ──
-  const handleEoSync = async () => {
-    if (!eoApiKey.trim()) { toast.error(api.cards.easyorders.apiKeyErr); return; }
-    setEoSyncing(true);
-    try {
-      const r = await fetch("/api/easy-orders/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: eoApiKey.trim(), storeName: eoStoreName.trim() || "متجري" }),
-      });
-      const d = await r.json();
-      if (!r.ok) {
-        const codeMessages: Record<string, string> = {
-          invalid_api_key: api.cards.easyorders.invalidApiKeyErr,
-          insufficient_permissions: api.cards.easyorders.insufficientPermsErr,
-          network_error: api.cards.easyorders.networkErr,
-          timeout: api.cards.easyorders.networkErr,
-        };
-        toast.error(codeMessages[d.code as string] ?? d.error ?? api.cards.easyorders.syncErr);
-        return;
-      }
-      toast.success(api.cards.easyorders.syncSuccess(d.productsSynced ?? 0));
-      if (d.productSyncError) toast.error(d.productSyncError);
-      setEoStatus(prev => ({
-        connected: true,
-        storeName: d.storeName,
-        totalSynced: d.productsSynced,
-        lastSyncAt: new Date().toISOString(),
-        webhookOrdersConfigured: prev?.webhookOrdersConfigured ?? false,
-        webhookStatusUpdateConfigured: prev?.webhookStatusUpdateConfigured ?? false,
-      }));
-    } catch {
-      toast.error(api.cards.easyorders.syncErr);
-    } finally {
-      setEoSyncing(false);
-    }
-  };
-
-  const handleEoDisconnect = () => {
-    setDisconnectModal({
-      open: true,
-      title: locale === "ar" ? "فك ربط إيزي أوردرز" : "Disconnect EasyOrders",
-      description: locale === "ar"
-        ? "الأوردرات الجديدة مش هتتزامن تلقائياً بعد كده، ورسائل التأكيد التلقائية هتتوقف."
-        : "New orders will stop syncing automatically, and auto-confirmation messages will be paused.",
-      loading: false,
-      onConfirm: async () => {
-        setDisconnectModal(prev => ({ ...prev, loading: true }));
-        try {
-          const r = await fetch("/api/easy-orders/sync", { method: "DELETE" });
-          const d = await r.json();
-          if (!r.ok) throw new Error(d.error ?? "Error");
-          setEoStatus({ connected: false });
-          setEoApiKey("");
-          setEoStoreName("");
-          toast.success(locale === "ar" ? "تم فك ربط إيزي أوردرز" : "EasyOrders disconnected");
-          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
-        } catch (e: any) {
-          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Disconnect failed"));
-          setDisconnectModal(prev => ({ ...prev, loading: false }));
-        }
-      },
-    });
-  };
-
-  const handleEoSaveSecret = async (type: "orders" | "status_update") => {
-    const secret = type === "orders" ? eoWebhookSecretOrders : eoWebhookSecretStatusUpdate;
-    if (!secret.trim()) { toast.error(api.cards.easyorders.secretErr); return; }
-    const setSaving = type === "orders" ? setEoSavingSecretOrders : setEoSavingSecretStatusUpdate;
-    setSaving(true);
-    try {
-      const r = await fetch("/api/easy-orders/sync", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, secret: secret.trim() }),
-      });
-      const d = await r.json();
-      if (!r.ok) { toast.error(d.error ?? api.cards.easyorders.syncErr); return; }
-      toast.success(api.cards.easyorders.secretSavedMsg);
-      setEoStatus(prev => prev
-        ? {
-            ...prev,
-            ...(type === "orders" ? { webhookOrdersConfigured: true } : { webhookStatusUpdateConfigured: true }),
-          }
-        : prev);
-      if (type === "orders") setEoWebhookSecretOrders(""); else setEoWebhookSecretStatusUpdate("");
-    } catch {
-      toast.error(api.cards.easyorders.syncErr);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ── Shopify Handlers (Client Credentials فقط — بلا Admin Token) ──
-  const handleShConnect = async () => {
-    if (!shStoreName.trim()) { toast.error("أدخل اسم المتجر أولاً"); return; }
-    if (!shShopDomain.trim()) { toast.error("أدخل دومين Shopify — مطلوب للتحقق من المتجر"); return; }
-    const clientId = shClientId.trim();
-    const clientSecret = shClientSecret.trim();
-    if (!clientId || !clientSecret) {
-      toast.error(locale === "ar" ? "أدخل Client ID و Client Secret — الاتنين مطلوبين" : "Client ID and Client Secret are both required");
-      return;
-    }
-    setShConnecting(true);
-    try {
-      const r = await fetch("/api/shopify/install", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeName: shStoreName.trim(),
-          shopDomain: shShopDomain.trim(),
-          clientId,
-          clientSecret,
-        }),
-      });
-      const d = await r.json();
-      if (!r.ok) { toast.error(d.error ?? "فشل الحفظ"); return; }
-      if (d.webhooks?.autoSetup) {
-        toast.success(`✅ تم ربط ${d.storeName} وتسجيل ${d.webhooks.registered} webhook تلقائياً 🎉`);
-      } else if (d.webhooks?.registered > 0) {
-        toast.success(`✅ تم ربط ${d.storeName} — ${d.webhooks.registered} webhook مسجل`);
-      } else {
-        toast.success(`✅ تم حفظ متجر ${d.storeName} — أضف الـ Webhook URL في Shopify يدوياً`);
-      }
-      setShStoreName(""); setShShopDomain("");
-      setShClientId(""); setShClientSecret("");
-      loadShopifyStatus();
-    } catch {
-      toast.error("خطأ في الاتصال");
-    } finally {
-      setShConnecting(false);
-    }
-  };
-
-  const handleShSyncWebhooks = async () => {
-    setShSyncing(true);
-    try {
-      const r = await fetch("/api/shopify/sync-webhooks", { method: "POST" });
-      const d = await r.json();
-      if (!r.ok) { toast.error(d.error ?? "فشل تسجيل الـ webhooks"); return; }
-      if (d.success) toast.success(d.message);
-      else toast.warning(d.message);
-    } catch {
-      toast.error("خطأ في الاتصال");
-    } finally {
-      setShSyncing(false);
-    }
-  };
-
-  const handleShDisconnect = () => {
-    setDisconnectModal({
-      open: true,
-      title: locale === "ar" ? "فك ربط متجر Shopify" : "Disconnect Shopify Store",
-      description: locale === "ar"
-        ? "سيتم إيقاف مزامنة الطلبات وتحديثات الحالات واستعادة السلات المتروكة تلقائياً لهذا المتجر."
-        : "Order synchronization, status updates, and abandoned cart recovery will be stopped for this store.",
-      loading: false,
-      onConfirm: async () => {
-        setDisconnectModal(prev => ({ ...prev, loading: true }));
-        try {
-          const r = await fetch("/api/shopify/install", { method: "DELETE" });
-          if (!r.ok) {
-            const d = await r.json().catch(() => ({}));
-            throw new Error(d.error ?? "Failed to disconnect");
-          }
-          toast.success(locale === "ar" ? "تم فك ربط Shopify" : "Shopify disconnected");
-          loadShopifyStatus();
-          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
-        } catch (e: any) {
-          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Failed to disconnect"));
-          setDisconnectModal(prev => ({ ...prev, loading: false }));
-        }
-      },
-    });
-  };
-
-  // ── WooCommerce Handlers ──
-  const handleWooDisconnect = () => {
-    setDisconnectModal({
-      open: true,
-      title: locale === "ar" ? "فك ربط متجر WooCommerce" : "Disconnect WooCommerce Store",
-      description: locale === "ar"
-        ? "سيتم إيقاف مزامنة الطلبات والمنتجات وتحديثات الحالات التلقائية لهذا المتجر."
-        : "Order & product synchronization and automatic status updates will be stopped for this store.",
-      loading: false,
-      onConfirm: async () => {
-        setDisconnectModal(prev => ({ ...prev, loading: true }));
-        try {
-          const r = await fetch("/api/woocommerce/connect", { method: "DELETE" });
-          if (!r.ok) {
-            const d = await r.json().catch(() => ({}));
-            throw new Error(d.error ?? "Failed to disconnect");
-          }
-          toast.success(locale === "ar" ? "تم فك ربط WooCommerce" : "WooCommerce disconnected");
-          loadShopifyStatus();
-          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
-        } catch (e: any) {
-          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Failed to disconnect"));
-          setDisconnectModal(prev => ({ ...prev, loading: false }));
-        }
-      },
-    });
-  };
-
   // ── Card Definitions ──
   const CARD_DEFS: CardDef[] = [
     {
@@ -599,45 +286,6 @@ export default function API() {
       externalLink: {
         href: "https://developers.facebook.com/apps",
         label: locale === "ar" ? "لوحة مطوري Meta (Meta for Developers)" : "Meta for Developers",
-      },
-    },
-    {
-      id: "shopify",
-      title: locale === "ar" ? "ربط Shopify" : "Connect Shopify",
-      subtitle: locale === "ar" ? "Client ID + Secret — تسجيل تلقائي للـ Webhooks" : "Client ID + Secret — auto Webhook setup",
-      steps: [
-        { title: locale === "ar" ? "أنشئ تطبيقًا من لوحة مطوري Shopify" : "Create an app in Shopify Dev Dashboard", desc: locale === "ar" ? "افتح الزرار تحت ← أنشئ تطبيقًا جديدًا (Create app) ← اختر متجرك وثبّت التطبيق عليه (Custom distribution)." : "Open the button below → create a new app (Create app) → select your store and install it (Custom distribution)." },
-        { title: locale === "ar" ? "فعّل الصلاحيات وثبّت" : "Enable scopes & install", desc: locale === "ar" ? "من صفحة التطبيق: Configuration ← فعّل صلاحيات Admin API من الصندوق تحت ← احفظ ثم Install/Update عشان تتطبق." : "In the app page: Configuration → enable the Admin API scopes from the box below → Save, then Install/Update to apply." },
-        { title: locale === "ar" ? "انسخ بيانات الاعتماد واربط" : "Copy credentials & connect", desc: locale === "ar" ? "من API credentials انسخ Client ID و Client Secret والصقهما في وني مع اسم المتجر والدومين — وهنسجل الـ Webhooks تلقائيًا." : "From API credentials copy the Client ID and Client Secret, paste them in Wani with the store name and domain — webhooks register automatically." },
-      ],
-      guideExtra: <ShopifyScopesBox locale={locale} />,
-      externalLink: {
-        href: "https://dev.shopify.com/dashboard",
-        label: locale === "ar" ? "لوحة مطوري Shopify (Dev Dashboard)" : "Shopify Dev Dashboard",
-      },
-    },
-    {
-      id: "easyorders",
-      title: api.cards.easyorders.title,
-      subtitle: api.cards.easyorders.subtitle,
-      steps: api.cards.easyorders.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
-      externalLink: {
-        href: "https://app.easy-orders.net",
-        label: locale === "ar" ? "لوحة تحكم إيزي أوردرز (EasyOrders)" : "EasyOrders Dashboard",
-      },
-    },
-    {
-      id: "woocommerce",
-      title: locale === "ar" ? "ربط WooCommerce" : "Connect WooCommerce",
-      subtitle: locale === "ar" ? "ربط موحّد — أوردرات + منتجات AI" : "Unified — orders + AI products",
-      steps: [
-        { title: locale === "ar" ? "أدخل بيانات المتجر" : "Enter store details", desc: locale === "ar" ? "اسم المتجر + الرابط + Consumer Key/Secret من WooCommerce REST API" : "Store name + URL + Consumer Key/Secret from WooCommerce REST API" },
-        { title: locale === "ar" ? "اضغط ربط المتجر" : "Click Connect", desc: locale === "ar" ? "هنتحقق من صحة البيانات ونبدأ مزامنة المنتجات تلقائياً" : "We'll verify credentials and auto-sync products" },
-        { title: locale === "ar" ? "أضف الـ Webhook" : "Add the Webhook", desc: locale === "ar" ? "انسخ الـ Webhook URL وأضفه في WooCommerce → Settings → Advanced → Webhooks" : "Copy the Webhook URL and add it in WooCommerce → Settings → Advanced → Webhooks" },
-      ],
-      externalLink: {
-        href: "https://woocommerce.com/document/woocommerce-rest-api/",
-        label: locale === "ar" ? "دليل وتوثيق WooCommerce REST API" : "WooCommerce REST API Docs",
       },
     },
     {
@@ -710,18 +358,36 @@ export default function API() {
         subtitle={api.subtitle}
       />
 
+      {/* ── Stores moved to Channels ── */}
+      <Link
+        href="/channels?connectStore=1"
+        className="mb-4 flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.07] dark:bg-emerald-950/20 px-4 py-3 transition-colors hover:border-emerald-500/45 hover:bg-emerald-500/[0.12]"
+      >
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-lg">
+          🏬
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-foreground">
+            {locale === "ar" ? "ربط المتاجر اتنقل لمركز القنوات" : "Store integrations moved to Channels"}
+          </span>
+          <span className="block text-xs text-muted-foreground mt-0.5">
+            {locale === "ar" ? "اربط Shopify و EasyOrders و WooCommerce من هناك" : "Connect Shopify, EasyOrders & WooCommerce from there"}
+          </span>
+        </span>
+        <span className="flex-shrink-0 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+          {locale === "ar" ? "انتقال ←" : "Go →"}
+        </span>
+      </Link>
+
       {/* ── Category Pills ── */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {CATEGORIES.map(cat => {
-          const activeCount = cat.cardIds.filter(cid => {
-            if (cid === "whatsapp") return waConnected;
-            if (cid === "shopify") return shopifyStatus?.connected;
-            if (cid === "easyorders") return eoStatus?.connected;
-            if (cid === "woocommerce") return wooStatus?.connected;
-            if (cid === "claude") return !!claudeApiKey;
-            if (cid === "elevenlabs") return isElevenLabsLinked;
-            return false;
-          }).length;
+            const activeCount = cat.cardIds.filter(cid => {
+              if (cid === "whatsapp") return waConnected;
+              if (cid === "claude") return !!claudeApiKey;
+              if (cid === "elevenlabs") return isElevenLabsLinked;
+              return false;
+            }).length;
           const isActive = activeCategory === cat.id;
           return (
             <button
@@ -762,9 +428,6 @@ export default function API() {
           .map(card => {
             const getConnected = (): { connected: boolean; label?: string } => {
               if (card.id === "whatsapp") return { connected: waConnected, label: waData?.phoneNumberId };
-              if (card.id === "shopify") return { connected: !!shopifyStatus?.connected, label: shopifyStatus?.storeName };
-              if (card.id === "easyorders") return { connected: !!eoStatus?.connected, label: eoStatus?.storeName };
-              if (card.id === "woocommerce") return { connected: !!wooStatus?.connected, label: wooStatus?.storeName };
               if (card.id === "claude") return { connected: !!claudeApiKey };
               if (card.id === "elevenlabs") return { connected: isElevenLabsLinked };
               return { connected: false };
@@ -821,62 +484,6 @@ export default function API() {
                       }}
                     />
                   )
-                )}
-
-                {card.id === "shopify" && (
-                  <ShopifyIntegration
-                    storeName={shStoreName}
-                    shopDomain={shShopDomain}
-                    setShopDomain={setShShopDomain}
-                    clientId={shClientId}
-                    setClientId={setShClientId}
-                    clientSecret={shClientSecret}
-                    setClientSecret={setShClientSecret}
-                    setStoreName={setShStoreName}
-                    isSuperAdmin={!!isSuper}
-                    webhookUrl={shWebhookUrl}
-                    status={shopifyStatus}
-                    onConnect={handleShConnect}
-                    onSyncWebhooks={handleShSyncWebhooks}
-                    syncing={shSyncing}
-                    onRefresh={loadShopifyStatus}
-                    loading={shConnecting}
-                    locale={locale}
-                    onDisconnect={handleShDisconnect}
-                  />
-                )}
-
-                {card.id === "easyorders" && (
-                  <EasyOrdersIntegration
-                    apiKey={eoApiKey}
-                    setApiKey={setEoApiKey}
-                    storeName={eoStoreName}
-                    setStoreName={setEoStoreName}
-                    webhookUrl={eoWebhookUrl}
-                    syncing={eoSyncing}
-                    status={eoStatus}
-                    onSync={handleEoSync}
-                    onDisconnect={handleEoDisconnect}
-                    webhookSecretOrders={eoWebhookSecretOrders}
-                    setWebhookSecretOrders={setEoWebhookSecretOrders}
-                    savingSecretOrders={eoSavingSecretOrders}
-                    onSaveSecretOrders={() => handleEoSaveSecret("orders")}
-                    webhookSecretStatusUpdate={eoWebhookSecretStatusUpdate}
-                    setWebhookSecretStatusUpdate={setEoWebhookSecretStatusUpdate}
-                    savingSecretStatusUpdate={eoSavingSecretStatusUpdate}
-                    onSaveSecretStatusUpdate={() => handleEoSaveSecret("status_update")}
-                    labels={api.cards.easyorders}
-                    locale={locale}
-                  />
-                )}
-
-                {card.id === "woocommerce" && (
-                  <WooCommerceIntegration
-                    status={wooStatus}
-                    onRefresh={loadShopifyStatus}
-                    locale={locale}
-                    onDisconnect={handleWooDisconnect}
-                  />
                 )}
 
                 {card.id === "webhook" && (

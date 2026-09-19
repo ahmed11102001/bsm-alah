@@ -16,6 +16,7 @@ import {
   PageHeaderSkeleton, FormSkeleton,
 } from "@/components/dashboard/DashboardSkeletons";
 import WhatsAppProfileView from "./_components/WhatsAppProfileView";
+import AppearanceSettings from "./_components/AppearanceSettings";
 
 function SectionHeader({ icon, title, desc, index }: {
   icon: React.ReactNode; title: string; desc: string; index: string;
@@ -117,6 +118,9 @@ export default function SettingsPage() {
         title={locale === "ar" ? "إعدادات الواتساب" : "WhatsApp Settings"}
         subtitle={locale === "ar" ? "الربط وبيانات الاعتماد وبروفايل النشاط التجاري" : "Connection, credentials and business profile"}
       />
+
+      {/* ── Appearance / المظهر ── */}
+      <AppearanceSettings />
 
       {/* ═══════════════ إعدادات حساب الواتساب ═══════════════ */}
       <section className="space-y-4">

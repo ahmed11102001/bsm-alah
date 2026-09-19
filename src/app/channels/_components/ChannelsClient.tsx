@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import ChannelsSideRail from "./ChannelsSideRail";
+import ShopifyOAuthToast from "./ShopifyOAuthToast";
+import StoreIntegrations from "./store/StoreIntegrations";
 import { motion, type Variants } from "framer-motion";
 import {
   MessageSquare,
@@ -32,6 +34,9 @@ interface ChannelsClientProps {
     lastTestSuccess?: boolean | null;
   } | null;
   userName?: string | null;
+  canStore?: boolean;
+  canManageStore?: boolean;
+  connectStoreRequested?: boolean;
 }
 
 export default function ChannelsClient({
@@ -40,6 +45,9 @@ export default function ChannelsClient({
   isEmailConnected = false,
   emailData,
   userName,
+  canStore = false,
+  canManageStore = false,
+  connectStoreRequested = false,
 }: ChannelsClientProps) {
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -59,6 +67,7 @@ export default function ChannelsClient({
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <ChannelsSideRail />
+      <ShopifyOAuthToast />
       {/* Header section */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
@@ -368,6 +377,13 @@ export default function ChannelsClient({
           </div>
         </motion.div>
       </motion.div>
+
+      {/* ── Store Integrations (Shopify / EasyOrders / WooCommerce) ── */}
+      <StoreIntegrations
+        canStore={canStore}
+        canManageStore={canManageStore}
+        autoOpen={connectStoreRequested}
+      />
     </div>
   );
 }

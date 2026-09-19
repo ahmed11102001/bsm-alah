@@ -9,7 +9,7 @@ import {
   Link as LinkIcon, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { CopyInput } from "./CopyInput";
+import { CopyInput } from "@/app/dashboard/api/_components/CopyInput";
 
 export interface WooStatus {
   connected: boolean;

@@ -7,7 +7,7 @@
 //  ShopifyStore.accessToken — يعني صفر تعديل على shopify-auth.ts، والـresolver
 //  بيتعامل معه كـ legacy_token (أولوية قصوى) تلقائيًا.
 //
-//  أي فشل → redirect على /dashboard?tab=api مع shopify_error واضح.
+//  أي فشل → redirect على /channels مع shopify_error واضح.
 //  الميزة مقفولة خلف SHOPIFY_APP_CLIENT_ID (راجع auth/route.ts).
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -77,11 +77,11 @@ export function verifyState(state: string): string | null {
 
 export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
-  // الهبوط مباشرة على صفحة التكاملات (/dashboard/api) — باراميتر tab=api لا
-  // يستهلكه أي كود، أما هذا المسار فهو صفحة ShopifyContent نفسها، ومعالج
-  // الـtoast في dashboard/layout يغطي كل صفحات الداشبورد.
+  // الهبوط مباشرة على مركز القنوات (/channels) حيث كروت المتاجر —
+  // معالج الـtoast في channels (ShopifyOAuthToast) يعرض النتيجة وينظف الـURL.
+  // الـ redirect URI عند Shopify هو /api/shopify/callback فمش هيتغير.
   const fail = (reason: string) =>
-    NextResponse.redirect(new URL(`/dashboard/api?shopify_error=${reason}`, appUrl));
+    NextResponse.redirect(new URL(`/channels?shopify_error=${reason}`, appUrl));
 
   const code = req.nextUrl.searchParams.get("code");
   const shop = req.nextUrl.searchParams.get("shop");
@@ -191,5 +191,5 @@ export async function GET(req: NextRequest) {
     console.error("[Shopify OAuth] Post-connect setup failed:", err instanceof Error ? err.message : err);
   }
 
-  return NextResponse.redirect(new URL("/dashboard/api?shopify_connected=1", appUrl));
+  return NextResponse.redirect(new URL("/channels?shopify_connected=1", appUrl));
 }
