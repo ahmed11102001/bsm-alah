@@ -88,8 +88,7 @@ export const emailCartAbandonedSteps = inngest.createFunction(
         });
 
         if (!template) {
-          console.warn(`[EmailCartAbandon] Template not found: ${currentStep.templateId}`);
-          return null;
+          throw new Error(`Template not found: ${currentStep.templateId}`);
         }
 
         const emailConnection = await prisma.emailConnection.findUnique({
@@ -97,20 +96,22 @@ export const emailCartAbandonedSteps = inngest.createFunction(
         });
 
         if (!emailConnection) {
-          console.warn(`[EmailCartAbandon] No email connection for user ${userId}`);
-          return null;
+          throw new Error(`No email connection for user ${userId}`);
         }
 
-        let html = template.html;
+        let html = template.bodyHtml;
         const nameToUse = contact?.name || customerName || "عميلنا العزيز";
         html = html.replace(/{{name}}/g, nameToUse);
 
-        await sendEmailViaProvider({
+        const res = await sendEmailViaProvider({
           connection: emailConnection,
           to: targetEmail,
           subject: template.subject,
           html,
         });
+        if (!res.success) {
+          throw new Error(res.error || "Email send failed");
+        }
 
         return { sent: true, step: i + 1 };
       });

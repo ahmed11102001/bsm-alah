@@ -6,8 +6,8 @@ export const emailWinbackDailyCron = inngest.createFunction(
   {
     id: "email-winback-daily-cron",
     retries: 2,
+    triggers: [{ cron: "0 9 * * *" }], // Runs daily at 9:00 AM UTC
   },
-  { cron: "0 9 * * *" }, // Runs daily at 9:00 AM UTC
   async ({ step }) => {
     // 1. Get all enabled WIN_BACK automations
     const automations = await step.run("get-enabled-winback-automations", async () => {
@@ -98,16 +98,19 @@ export const emailWinbackDailyCron = inngest.createFunction(
         let sent = 0;
         for (const contact of contactsToEmail) {
           try {
-            let html = automation.template!.html;
+            let html = automation.template!.bodyHtml;
             const nameToUse = contact.name || "عميلنا العزيز";
             html = html.replace(/{{name}}/g, nameToUse);
 
-            await sendEmailViaProvider({
+            const res = await sendEmailViaProvider({
               connection: automation.user.emailConnection!,
               to: contact.email!,
               subject: automation.template!.subject,
               html,
             });
+            if (!res.success) {
+              throw new Error(res.error || "Email send failed");
+            }
 
             await prisma.contact.update({
               where: { id: contact.id },

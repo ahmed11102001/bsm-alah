@@ -53,18 +53,21 @@ export const emailVipQualified = inngest.createFunction(
         return { skipped: true, reason: "no_email_connection" };
       }
 
-      let html = template.html;
+      let html = template.bodyHtml;
       const nameToUse = contact.name || "عميلنا العزيز";
       html = html.replace(/{{name}}/g, nameToUse);
 
-      await sendEmailViaProvider({
+      const res = await sendEmailViaProvider({
         connection: emailConnection,
         to: contact.email,
         subject: template.subject,
         html,
       });
+      if (!res.success) {
+        return { skipped: true, reason: "send_failed", error: res.error };
+      }
 
-      // 4. Update contact
+      // 4. Update contact — only after a confirmed send
       await prisma.contact.update({
         where: { id: contactId },
         data: { vipEmailSentAt: new Date() },
@@ -73,7 +76,8 @@ export const emailVipQualified = inngest.createFunction(
       return { sent: true };
     });
 
-    console.log(`[EmailVIP] Processed for contact ${contactId}: ${result.sent ? "Sent" : `Skipped (${result.reason})`}`);
+    const done = "sent" in result && result.sent;
+    console.log(`[EmailVIP] Processed for contact ${contactId}: ${done ? "Sent" : `Skipped (${"reason" in result ? result.reason : "unknown"})`}`);
     return result;
   }
 );
