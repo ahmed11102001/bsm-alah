@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Users, Store, Bot } from "lucide-react";
 
 // ─── شريط جانبي عائم (كارت طولي صغير في النصف الأسفل) ──────────────────────
-// مش سايدبار للتنقل العام — اختصارات سريعة: وني CRM (شغّال) + ربط المتجر
-// ووني AI (واجهة فقط حاليًا).
-export default function ChannelsSideRail() {
+// مش سايدبار للتنقل العام — اختصارات سريعة: وني CRM + ويزرد ربط المتجر
+// (شغّالين) ووني AI (واجهة فقط حاليًا).
+export default function ChannelsSideRail({ onConnectStore }: { onConnectStore: () => void }) {
   return (
     <>
       <style>{`
@@ -35,17 +35,15 @@ export default function ChannelsSideRail() {
         <span className="text-[11px] font-bold text-emerald-200">وني CRM</span>
       </Link>
 
-      {/* ربط المتجر — واجهة فقط حاليًا */}
+      {/* ربط المتجر — يفتح ويزرد الربط */}
       <button
         type="button"
         title="ربط المتجر"
-        className="group flex w-[76px] cursor-default flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2 py-3 transition-all duration-200 hover:bg-white/[0.08]"
+        onClick={onConnectStore}
+        className="group flex w-[76px] flex-col items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] px-2 py-3 transition-all duration-200 hover:bg-emerald-500/[0.14] hover:shadow-lg hover:shadow-emerald-500/10 active:scale-95"
       >
-        <Store className="h-5 w-5 text-white/60 transition-transform duration-200 group-hover:scale-110" />
-        <span className="text-[11px] font-semibold text-white/70">ربط المتجر</span>
-        <span className="rounded-full bg-white/10 px-1.5 py-px text-[9px] font-medium text-white/40">
-          قريبًا
-        </span>
+        <Store className="h-5 w-5 text-emerald-300/90 transition-transform duration-200 group-hover:scale-110" />
+        <span className="text-[11px] font-semibold text-emerald-100/90">ربط المتجر</span>
       </button>
 
       {/* وني AI — زر فقط حاليًا */}
@@ -61,6 +59,17 @@ export default function ChannelsSideRail() {
         </span>
       </button>
     </div>
+
+      {/* زر عائم للموبايل (الشريط مخفي تحت lg) — يفتح ويزرد الربط */}
+      <button
+        type="button"
+        onClick={onConnectStore}
+        title="ربط المتجر"
+        aria-label="ربط المتجر"
+        className="lg:hidden fixed bottom-5 left-5 z-40 flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-500/30 bg-[#06231a]/95 shadow-2xl shadow-black/50 backdrop-blur-xl active:scale-95 transition"
+      >
+        <Store className="h-5 w-5 text-emerald-300" />
+      </button>
     </>
   );
 }

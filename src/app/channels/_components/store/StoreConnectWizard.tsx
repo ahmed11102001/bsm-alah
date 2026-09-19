@@ -1,28 +1,37 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { X, ArrowRight, CheckCircle2, Store as StoreIcon } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
-import { StoreCardId, StoreCardDef } from "./store-types";
-import { StoreIntegrationCard } from "./StoreIntegrationCard";
 import { DisconnectModal, UpgradeModal } from "@/app/dashboard/api/_components/Modals";
-import { ShopifyScopesBox } from "./ShopifyScopesBox";
 import { ShopifyIntegration, type ShopifyStatus } from "./ShopifyIntegration";
 import { EasyOrdersIntegration } from "./EasyOrdersIntegration";
 import { WooCommerceIntegration } from "./WooCommerceIntegration";
 
-interface StoreIntegrationsProps {
+type StoreId = "shopify" | "easyorders" | "woocommerce";
+type Step = { name: "choose" } | { name: "connect"; store: StoreId } | { name: "done"; store: StoreId };
+
+interface StoreConnectWizardProps {
+  open: boolean;
+  onClose: () => void;
   canStore: boolean;
   canManageStore: boolean;
-  autoOpen?: boolean;
 }
 
-export default function StoreIntegrations({ canStore, canManageStore, autoOpen = false }: StoreIntegrationsProps) {
+const STORE_META: Array<{ id: StoreId; icon: string; alt: string }> = [
+  { id: "shopify", icon: "/partners/shopify.svg", alt: "Shopify" },
+  { id: "easyorders", icon: "/partners/easyorder.svg", alt: "EasyOrders" },
+  { id: "woocommerce", icon: "/partners/woocommerce.svg", alt: "WooCommerce" },
+];
+
+export default function StoreConnectWizard({ open, onClose, canStore, canManageStore }: StoreConnectWizardProps) {
   const { t, locale } = useLanguage();
   const api = t.api;
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const ar = locale === "ar";
 
-  const [openCard, setOpenCard] = useState<StoreCardId | null>(autoOpen ? "shopify" : null);
+  const [step, setStep] = useState<Step>({ name: "choose" });
+  const entryConnectedRef = useRef(false);
 
   // ── EasyOrders States ──
   const [eoApiKey, setEoApiKey] = useState("");
@@ -63,8 +72,20 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
     open: boolean; title: string; description: string;
   }>({ open: false, title: "", description: "" });
 
-  // ── Load initial data ───────────────────────────────────────────────────────
-  const loadShopifyStatus = useCallback(async () => {
+  const isConnected = (id: StoreId): boolean => {
+    if (id === "shopify") return !!shopifyStatus?.connected;
+    if (id === "easyorders") return !!eoStatus?.connected;
+    return !!wooStatus?.connected;
+  };
+
+  const storeNameOf = (id: StoreId): string => {
+    if (id === "shopify") return ar ? "Shopify" : "Shopify";
+    if (id === "easyorders") return ar ? "إيزي أوردرز" : "EasyOrders";
+    return "WooCommerce";
+  };
+
+  // ── Load statuses when wizard opens ─────────────────────────────────────────
+  const loadShopifyStatus = async () => {
     if (!canStore) return;
     try {
       const shUrlRes = await fetch("/api/shopify/URL").catch(() => null);
@@ -103,59 +124,58 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
     } catch (e) {
       console.error("[loadShopifyStatus]", e);
     }
-  }, [canStore]);
+  };
 
   useEffect(() => {
-    if (canStore) {
-      fetch("/api/easy-orders/sync")
-        .then(async r => (r.ok ? r.json() : null))
-        .then(d => { if (d) setEoStatus(d); })
-        .catch(err => console.error("[EasyOrders] Status fetch error", err));
-    }
+    if (!open) return;
+    setStep({ name: "choose" });
+    if (!canStore) return;
     loadShopifyStatus();
-  }, [canStore, loadShopifyStatus]);
+    fetch("/api/easy-orders/sync")
+      .then(async r => (r.ok ? r.json() : null))
+      .then(d => { if (d) setEoStatus(d); })
+      .catch(err => console.error("[EasyOrders] Status fetch error", err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open ]);
 
-  useEffect(() => {
-    if (autoOpen && sectionRef.current) {
-      sectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [autoOpen]);
-
-  const loadEoWebhookUrl = useCallback(async () => {
+  const loadEoWebhookUrl = async () => {
     if (eoUrlLoaded) return;
     try {
       const r = await fetch("/api/easy-orders/URL");
       const d = await r.json();
       if (d.url) { setEoWebhookUrl(d.url); setEoUrlLoaded(true); }
     } catch {}
-  }, [eoUrlLoaded]);
+  };
 
-  // ── Plan Lock ──
-  const lockMessage = locale === "ar"
+  // ── التقدم التلقائي لخطوة "تم الربط" لما الحالة تتحول لمتصل ────────────────
+  useEffect(() => {
+    if (step.name !== "connect" || entryConnectedRef.current) return;
+    if (isConnected(step.store)) setStep({ name: "done", store: step.store });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopifyStatus, eoStatus, wooStatus]);
+
+  const lockMessage = ar
     ? "ربط المتاجر متاح من باقة Pro فما فوق. قم بترقية الباقة."
     : "Store integrations are available on Pro plan and above. Please upgrade.";
-  const isStoreCardLocked = () => !canStore;
-  const handleCardClick = (id: StoreCardId) => {
-    if (isStoreCardLocked()) {
-      const upgradeDetails: Record<StoreCardId, { title: string; description: string }> = {
-        shopify: {
-          title: locale === "ar" ? "ربط Shopify — باقة Pro+" : "Shopify — Pro+ Plan",
-          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
-        },
-        easyorders: {
-          title: locale === "ar" ? "ربط EasyOrders — باقة Pro+" : "EasyOrders — Pro+ Plan",
-          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
-        },
-        woocommerce: {
-          title: locale === "ar" ? "ربط WooCommerce — باقة Pro+" : "WooCommerce — Pro+ Plan",
-          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
-        },
+
+  const openStore = (id: StoreId) => {
+    if (!canStore) {
+      const titles: Record<StoreId, string> = {
+        shopify: ar ? "ربط Shopify — باقة Pro+" : "Shopify — Pro+ Plan",
+        easyorders: ar ? "ربط EasyOrders — باقة Pro+" : "EasyOrders — Pro+ Plan",
+        woocommerce: ar ? "ربط WooCommerce — باقة Pro+" : "WooCommerce — Pro+ Plan",
       };
-      const d = upgradeDetails[id];
-      setUpgradeModal({ open: true, title: d.title, description: d.description });
+      setUpgradeModal({
+        open: true,
+        title: titles[id],
+        description: ar
+          ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة."
+          : "Store integrations require Pro or above. Upgrade to connect and automate.",
+      });
       return;
     }
-    setOpenCard(prev => (prev === id ? null : id));
+    entryConnectedRef.current = isConnected(id);
+    setStep({ name: "connect", store: id });
     if (id === "easyorders") loadEoWebhookUrl();
   };
 
@@ -200,8 +220,8 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
   const handleEoDisconnect = () => {
     setDisconnectModal({
       open: true,
-      title: locale === "ar" ? "فك ربط إيزي أوردرز" : "Disconnect EasyOrders",
-      description: locale === "ar"
+      title: ar ? "فك ربط إيزي أوردرز" : "Disconnect EasyOrders",
+      description: ar
         ? "الأوردرات الجديدة مش هتتزامن تلقائياً بعد كده، ورسائل التأكيد التلقائية هتتوقف."
         : "New orders will stop syncing automatically, and auto-confirmation messages will be paused.",
       loading: false,
@@ -214,10 +234,10 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
           setEoStatus({ connected: false });
           setEoApiKey("");
           setEoStoreName("");
-          toast.success(locale === "ar" ? "تم فك ربط إيزي أوردرز" : "EasyOrders disconnected");
+          toast.success(ar ? "تم فك ربط إيزي أوردرز" : "EasyOrders disconnected");
           setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
         } catch (e: any) {
-          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Disconnect failed"));
+          toast.error(e?.message ?? (ar ? "فشل فك الربط" : "Disconnect failed"));
           setDisconnectModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -252,14 +272,14 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
     }
   };
 
-  // ── Shopify Handlers (Client Credentials فقط — بلا Admin Token) ──
+  // ── Shopify Handlers ──
   const handleShConnect = async () => {
     if (!shStoreName.trim()) { toast.error("أدخل اسم المتجر أولاً"); return; }
     if (!shShopDomain.trim()) { toast.error("أدخل دومين Shopify — مطلوب للتحقق من المتجر"); return; }
     const clientId = shClientId.trim();
     const clientSecret = shClientSecret.trim();
     if (!clientId || !clientSecret) {
-      toast.error(locale === "ar" ? "أدخل Client ID و Client Secret — الاتنين مطلوبين" : "Client ID and Client Secret are both required");
+      toast.error(ar ? "أدخل Client ID و Client Secret — الاتنين مطلوبين" : "Client ID and Client Secret are both required");
       return;
     }
     setShConnecting(true);
@@ -311,8 +331,8 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
   const handleShDisconnect = () => {
     setDisconnectModal({
       open: true,
-      title: locale === "ar" ? "فك ربط متجر Shopify" : "Disconnect Shopify Store",
-      description: locale === "ar"
+      title: ar ? "فك ربط متجر Shopify" : "Disconnect Shopify Store",
+      description: ar
         ? "سيتم إيقاف مزامنة الطلبات وتحديثات الحالات واستعادة السلات المتروكة تلقائياً لهذا المتجر."
         : "Order synchronization, status updates, and abandoned cart recovery will be stopped for this store.",
       loading: false,
@@ -324,11 +344,11 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
             const d = await r.json().catch(() => ({}));
             throw new Error(d.error ?? "Failed to disconnect");
           }
-          toast.success(locale === "ar" ? "تم فك ربط Shopify" : "Shopify disconnected");
+          toast.success(ar ? "تم فك ربط Shopify" : "Shopify disconnected");
           loadShopifyStatus();
           setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
         } catch (e: any) {
-          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Failed to disconnect"));
+          toast.error(e?.message ?? (ar ? "فشل فك الربط" : "Failed to disconnect"));
           setDisconnectModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -339,8 +359,8 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
   const handleWooDisconnect = () => {
     setDisconnectModal({
       open: true,
-      title: locale === "ar" ? "فك ربط متجر WooCommerce" : "Disconnect WooCommerce Store",
-      description: locale === "ar"
+      title: ar ? "فك ربط متجر WooCommerce" : "Disconnect WooCommerce Store",
+      description: ar
         ? "سيتم إيقاف مزامنة الطلبات والمنتجات وتحديثات الحالات التلقائية لهذا المتجر."
         : "Order & product synchronization and automatic status updates will be stopped for this store.",
       loading: false,
@@ -352,81 +372,36 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
             const d = await r.json().catch(() => ({}));
             throw new Error(d.error ?? "Failed to disconnect");
           }
-          toast.success(locale === "ar" ? "تم فك ربط WooCommerce" : "WooCommerce disconnected");
+          toast.success(ar ? "تم فك ربط WooCommerce" : "WooCommerce disconnected");
           loadShopifyStatus();
           setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
         } catch (e: any) {
-          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Failed to disconnect"));
+          toast.error(e?.message ?? (ar ? "فشل فك الربط" : "Failed to disconnect"));
           setDisconnectModal(prev => ({ ...prev, loading: false }));
         }
       },
     });
   };
 
-  // ── Card Definitions ──
-  const CARD_DEFS: StoreCardDef[] = [
-    {
-      id: "shopify",
-      title: locale === "ar" ? "ربط Shopify" : "Connect Shopify",
-      subtitle: locale === "ar" ? "Client ID + Secret — تسجيل تلقائي للـ Webhooks" : "Client ID + Secret — auto Webhook setup",
-      steps: [
-        { title: locale === "ar" ? "أنشئ تطبيقًا من لوحة مطوري Shopify" : "Create an app in Shopify Dev Dashboard", desc: locale === "ar" ? "افتح الزرار تحت ← أنشئ تطبيقًا جديدًا (Create app) ← اختر متجرك وثبّت التطبيق عليه (Custom distribution)." : "Open the button below → create a new app (Create app) → select your store and install it (Custom distribution)." },
-        { title: locale === "ar" ? "فعّل الصلاحيات وثبّت" : "Enable scopes & install", desc: locale === "ar" ? "من صفحة التطبيق: Configuration ← فعّل صلاحيات Admin API من الصندوق تحت ← احفظ ثم Install/Update عشان تتطبق." : "In the app page: Configuration → enable the Admin API scopes from the box below → Save, then Install/Update to apply." },
-        { title: locale === "ar" ? "انسخ بيانات الاعتماد واربط" : "Copy credentials & connect", desc: locale === "ar" ? "من API credentials انسخ Client ID و Client Secret والصقهما في وني مع اسم المتجر والدومين — وهنسجل الـ Webhooks تلقائيًا." : "From API credentials copy the Client ID and Client Secret, paste them in Wani with the store name and domain — webhooks register automatically." },
-      ],
-      guideExtra: <ShopifyScopesBox locale={locale} />,
-      externalLink: {
-        href: "https://dev.shopify.com/dashboard",
-        label: locale === "ar" ? "لوحة مطوري Shopify (Dev Dashboard)" : "Shopify Dev Dashboard",
-      },
-    },
-    {
-      id: "easyorders",
-      title: api.cards.easyorders.title,
-      subtitle: api.cards.easyorders.subtitle,
-      steps: api.cards.easyorders.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
-      externalLink: {
-        href: "https://app.easy-orders.net",
-        label: locale === "ar" ? "لوحة تحكم إيزي أوردرز (EasyOrders)" : "EasyOrders Dashboard",
-      },
-    },
-    {
-      id: "woocommerce",
-      title: locale === "ar" ? "ربط WooCommerce" : "Connect WooCommerce",
-      subtitle: locale === "ar" ? "ربط موحّد — أوردرات + منتجات AI" : "Unified — orders + AI products",
-      steps: [
-        { title: locale === "ar" ? "أدخل بيانات المتجر" : "Enter store details", desc: locale === "ar" ? "اسم المتجر + الرابط + Consumer Key/Secret من WooCommerce REST API" : "Store name + URL + Consumer Key/Secret from WooCommerce REST API" },
-        { title: locale === "ar" ? "اضغط ربط المتجر" : "Click Connect", desc: locale === "ar" ? "هنتحقق من صحة البيانات ونبدأ مزامنة المنتجات تلقائياً" : "We'll verify credentials and auto-sync products" },
-        { title: locale === "ar" ? "أضف الـ Webhook" : "Add the Webhook", desc: locale === "ar" ? "انسخ الـ Webhook URL وأضفه في WooCommerce → Settings → Advanced → Webhooks" : "Copy the Webhook URL and add it in WooCommerce → Settings → Advanced → Webhooks" },
-      ],
-      externalLink: {
-        href: "https://woocommerce.com/document/woocommerce-rest-api/",
-        label: locale === "ar" ? "دليل وتوثيق WooCommerce REST API" : "WooCommerce REST API Docs",
-      },
-    },
-  ];
+  if (!open) return null;
 
-  if (!canManageStore) {
-    return (
-      <div ref={sectionRef} className="mt-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-center backdrop-blur-md">
-        <p className="text-sm font-bold text-white">
-          {locale === "ar" ? "ربط المتاجر متاح لأصحاب الصلاحيات فقط" : "Store integrations require additional permissions"}
-        </p>
-        <p className="mt-1 text-xs text-white/50">
-          {locale === "ar" ? "تواصل مع مالك الحساب لمنحك صلاحية إدارة المتاجر." : "Ask the account owner for store management permission."}
-        </p>
-      </div>
-    );
-  }
+  const close = () => {
+    setStep({ name: "choose" });
+    onClose();
+  };
 
   return (
-    <div ref={sectionRef} className="mt-10 scroll-mt-24">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
+      onClick={close}
+      dir={ar ? "rtl" : "ltr"}
+    >
       <UpgradeModal
         isOpen={upgradeModal.open}
         onClose={() => setUpgradeModal(prev => ({ ...prev, open: false }))}
         title={upgradeModal.title}
         description={upgradeModal.description}
-        price={locale === "ar" ? "599 ج/شهر" : "599 EGP/mo"}
+        price={ar ? "599 ج/شهر" : "599 EGP/mo"}
         locale={locale}
       />
 
@@ -440,39 +415,114 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
         locale={locale}
       />
 
-      {/* Section Header */}
-      <div className="mb-4 flex items-center gap-2">
-        <div className="h-2 w-2 rounded-full bg-emerald-400" />
-        <h2 className="text-xs font-bold uppercase tracking-wider text-white/50">
-          {locale === "ar" ? "ربط المتاجر (Shopify / EasyOrders / WooCommerce)" : "Store Integrations (Shopify / EasyOrders / WooCommerce)"}
-        </h2>
-      </div>
+      <div
+        className="w-full max-w-md rounded-3xl border border-white/10 bg-[#071f18] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10 flex-shrink-0">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex-shrink-0">
+            <StoreIcon className="h-5 w-5 text-emerald-300" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-white">
+              {step.name === "choose" && (ar ? "ربط متجر" : "Connect a store")}
+              {step.name === "connect" && `${ar ? "ربط" : "Connect"} ${storeNameOf(step.store)}`}
+              {step.name === "done" && (ar ? "تم الربط" : "Connected")}
+            </p>
+            <p className="text-[11px] text-white/40">
+              {step.name === "choose" && (ar ? "اختار المنصة" : "Choose a platform")}
+              {step.name === "connect" && (ar ? "ادخل البيانات للربط" : "Enter details to connect")}
+              {step.name === "done" && (ar ? "متجرك جاهز" : "Your store is ready")}
+            </p>
+          </div>
+          {/* steps dots */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {(["choose", "connect", "done"] as const).map((s, i) => {
+              const order = { choose: 0, connect: 1, done: 2 } as const;
+              const cur = order[step.name];
+              return (
+                <span
+                  key={s}
+                  className={`h-1.5 rounded-full transition-all ${i <= cur ? "w-5 bg-emerald-400" : "w-1.5 bg-white/15"}`}
+                />
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={close}
+            aria-label={ar ? "إغلاق" : "Close"}
+            className="rounded-lg p-1.5 text-white/40 hover:text-white hover:bg-white/10 transition flex-shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-      {/* Cards List */}
-      <div className="space-y-3.5">
-        {CARD_DEFS.map(card => {
-          const getConnected = (): { connected: boolean; label?: string } => {
-            if (card.id === "shopify") return { connected: !!shopifyStatus?.connected, label: shopifyStatus?.storeName };
-            if (card.id === "easyorders") return { connected: !!eoStatus?.connected, label: eoStatus?.storeName };
-            if (card.id === "woocommerce") return { connected: !!wooStatus?.connected, label: wooStatus?.storeName };
-            return { connected: false };
-          };
-          const cs = getConnected();
-          const locked = !canStore;
+        {/* Body */}
+        <div className="p-5 overflow-y-auto">
+          {!canManageStore ? (
+            <div className="text-center py-6">
+              <p className="text-sm font-bold text-white">
+                {ar ? "ربط المتاجر متاح لأصحاب الصلاحيات فقط" : "Store integrations require additional permissions"}
+              </p>
+              <p className="mt-1 text-xs text-white/50">
+                {ar ? "تواصل مع مالك الحساب لمنحك صلاحية إدارة المتاجر." : "Ask the account owner for store management permission."}
+              </p>
+              <button
+                type="button"
+                onClick={close}
+                className="mt-5 rounded-xl bg-white/10 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/15 transition"
+              >
+                {ar ? "إغلاق" : "Close"}
+              </button>
+            </div>
+          ) : step.name === "choose" ? (
+            <div className="space-y-2.5">
+              {STORE_META.map(({ id, icon, alt }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => openStore(id)}
+                  className="w-full flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-start transition-all hover:border-emerald-500/40 hover:bg-emerald-500/[0.07] active:scale-[0.99]"
+                >
+                  <img src={icon} alt={alt} className="h-9 w-9 object-contain flex-shrink-0 rounded-xl bg-white/90 p-1" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-white">{storeNameOf(id)}</span>
+                    <span className="block text-[11px] text-white/45 mt-0.5">
+                      {id === "shopify" && (ar ? "Client ID + Secret — تسجيل تلقائي للـ Webhooks" : "Client ID + Secret — auto Webhook setup")}
+                      {id === "easyorders" && (ar ? "تكامل يدوي آمن عبر API" : "Secure manual API integration")}
+                      {id === "woocommerce" && (ar ? "ربط موحّد — أوردرات + منتجات" : "Unified — orders + products")}
+                    </span>
+                  </span>
+                  {isConnected(id) ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold text-emerald-300 flex-shrink-0">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      {ar ? "متصل" : "Connected"}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-white/50 flex-shrink-0">
+                      {ar ? "غير متصل" : "Not connected"}
+                    </span>
+                  )}
+                </button>
+              ))}
+              {!canStore && (
+                <p className="text-center text-[11px] text-amber-300/80 pt-1">{lockMessage}</p>
+              )}
+            </div>
+          ) : step.name === "connect" ? (
+            <div>
+              <button
+                type="button"
+                onClick={() => setStep({ name: "choose" })}
+                className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-white/50 hover:text-white transition"
+              >
+                <ArrowRight className={`h-3.5 w-3.5 ${ar ? "" : "rotate-180"}`} />
+                {ar ? "كل المتاجر" : "All stores"}
+              </button>
 
-          return (
-            <StoreIntegrationCard
-              key={card.id}
-              {...card}
-              locale={locale}
-              isOpen={openCard === card.id}
-              onToggle={() => handleCardClick(card.id)}
-              locked={locked}
-              lockMessage={lockMessage}
-              connected={cs.connected}
-              connectedLabel={cs.label}
-            >
-              {card.id === "shopify" && (
+              {step.store === "shopify" && (
                 <ShopifyIntegration
                   storeName={shStoreName}
                   shopDomain={shShopDomain}
@@ -495,7 +545,7 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
                 />
               )}
 
-              {card.id === "easyorders" && (
+              {step.store === "easyorders" && (
                 <EasyOrdersIntegration
                   apiKey={eoApiKey}
                   setApiKey={setEoApiKey}
@@ -519,7 +569,7 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
                 />
               )}
 
-              {card.id === "woocommerce" && (
+              {step.store === "woocommerce" && (
                 <WooCommerceIntegration
                   status={wooStatus}
                   onRefresh={loadShopifyStatus}
@@ -527,9 +577,30 @@ export default function StoreIntegrations({ canStore, canManageStore, autoOpen =
                   onDisconnect={handleWooDisconnect}
                 />
               )}
-            </StoreIntegrationCard>
-          );
-        })}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/30">
+                <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+              </span>
+              <p className="text-base font-extrabold text-white">
+                {ar ? "تم الربط بنجاح 🎉" : "Connected successfully 🎉"}
+              </p>
+              <p className="mt-1.5 text-xs text-white/50">
+                {ar
+                  ? `متجر ${storeNameOf(step.store)} اتربط وهيبدأ مزامنة الأوردرات تلقائيًا.`
+                  : `Your ${storeNameOf(step.store)} store is connected and will start syncing orders.`}
+              </p>
+              <button
+                type="button"
+                onClick={close}
+                className="mt-5 w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-[#04241b] hover:brightness-110 active:scale-[0.99] transition"
+              >
+                {ar ? "تم" : "Done"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

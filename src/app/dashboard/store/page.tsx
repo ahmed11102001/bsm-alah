@@ -5,7 +5,7 @@ import { CardsGridSkeleton } from "@/components/dashboard/DashboardSkeletons";
 // ─── صفحة المتجر — عملاء + أتمتات + إيرادات الحملات ─────────────────────────
 
 import { useCallback, useEffect, useState } from "react";
-import { ShoppingBag, Zap, Globe, Loader2, Unplug } from "lucide-react";
+import { ShoppingBag, Zap, Globe, Loader2, Unplug, Plug } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
@@ -154,18 +154,28 @@ export default function Store({ onOpenChat }: StoreProps) {
         }
         actions={
           activeStore ? (
-            <button
-              onClick={() => handleDisconnect(activeStore.source)}
-              disabled={disconnecting}
-              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {disconnecting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Unplug className="w-3.5 h-3.5" />
-              )}
-              {disconnecting ? tr("disconnecting", lang) : tr("disconnectBtn", lang)}
-            </button>
+            activeStore.isActive === false ? (
+              <a
+                href="/channels?connectStore=1"
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold text-white bg-[#25D366] hover:bg-[#20bb5a] transition-colors"
+              >
+                <Plug className="w-3.5 h-3.5" />
+                {lang === "ar" ? "اربط المتجر" : "Connect store"}
+              </a>
+            ) : (
+              <button
+                onClick={() => handleDisconnect(activeStore.source)}
+                disabled={disconnecting}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {disconnecting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Unplug className="w-3.5 h-3.5" />
+                )}
+                {disconnecting ? tr("disconnecting", lang) : tr("disconnectBtn", lang)}
+              </button>
+            )
           ) : undefined
         }
       />

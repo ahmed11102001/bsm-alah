@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import ChannelsSideRail from "./ChannelsSideRail";
 import ShopifyOAuthToast from "./ShopifyOAuthToast";
-import StoreIntegrations from "./store/StoreIntegrations";
+import StoreConnectWizard from "./store/StoreConnectWizard";
 import { motion, type Variants } from "framer-motion";
 import {
   MessageSquare,
@@ -49,6 +50,8 @@ export default function ChannelsClient({
   canManageStore = false,
   connectStoreRequested = false,
 }: ChannelsClientProps) {
+  const [wizardOpen, setWizardOpen] = useState(connectStoreRequested);
+
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
@@ -66,7 +69,7 @@ export default function ChannelsClient({
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <ChannelsSideRail />
+      <ChannelsSideRail onConnectStore={() => setWizardOpen(true)} />
       <ShopifyOAuthToast />
       {/* Header section */}
       <motion.div
@@ -378,11 +381,12 @@ export default function ChannelsClient({
         </motion.div>
       </motion.div>
 
-      {/* ── Store Integrations (Shopify / EasyOrders / WooCommerce) ── */}
-      <StoreIntegrations
+      {/* ── Store Connect Wizard (opens from rail / ?connectStore=1 / OAuth) ── */}
+      <StoreConnectWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
         canStore={canStore}
         canManageStore={canManageStore}
-        autoOpen={connectStoreRequested}
       />
     </div>
   );
